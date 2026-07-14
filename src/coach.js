@@ -64,17 +64,21 @@ export function scoreAttempt({ targetFrequency, samples }) {
   const cents = voiced.map((sample) => centsOff(sample.frequency, targetFrequency));
   const mean = cents.reduce((sum, value) => sum + value, 0) / cents.length;
   const spread = Math.sqrt(cents.reduce((sum, value) => sum + (value - mean) ** 2, 0) / cents.length);
-  const accuracy = Math.max(0, 100 - Math.abs(mean) * 1.8 - spread * 1.2);
+  // A beginner needs room to learn the motion. This rewards a relaxed,
+  // reasonably steady repeat instead of demanding near-perfect cents.
+  const accuracy = Math.max(0, 100 - Math.abs(mean) * 0.8 - spread * 0.65);
 
   let label = "Good data, try one small adjustment";
-  if (accuracy >= 86) label = "Lovely, repeatable match";
-  else if (accuracy >= 70) label = "Close, keep it easy";
-  else if (Math.abs(mean) > 55) label = mean > 0 ? "Let the pitch settle" : "Lift with a brighter vowel";
+  if (accuracy >= 82) label = "Lovely, repeatable match";
+  else if (accuracy >= 64) label = "Close enough to build on";
+  else if (Math.abs(mean) > 65) label = mean > 0 ? "Let the pitch settle" : "Lift with a brighter vowel";
 
   return {
     score: Math.round(accuracy),
     label,
     cents: Math.round(mean),
+    spread: Math.round(spread),
+    matched: accuracy >= 64,
     targetNote: midiToNoteName(frequencyToMidi(targetFrequency)),
   };
 }

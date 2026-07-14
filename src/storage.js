@@ -86,6 +86,7 @@ export function mergeTodayIntoProgress(progress, session, preferences) {
     lastStep: preferences.activeStep,
     lastMode: preferences.exerciseMode,
     practiceTier: preferences.practiceTier ?? normalized.practiceTier,
+    comfortAnchorMidi: preferences.comfortAnchorMidi ?? normalized.comfortAnchorMidi,
     totalAttempts: days.reduce((sum, day) => sum + day.attempts, 0),
     totalPracticeDays: days.length,
   });
@@ -104,6 +105,7 @@ function defaultProgress() {
     lastStep: "warmup",
     lastMode: "comfort-ladder",
     practiceTier: "starter",
+    comfortAnchorMidi: null,
     totalAttempts: 0,
     totalPracticeDays: 0,
   };

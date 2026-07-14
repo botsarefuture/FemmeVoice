@@ -3,6 +3,8 @@ import {
   Activity,
   Bot,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Coffee,
   Gauge,
   HeartPulse,
@@ -41,30 +43,31 @@ import {
   saveTodaySession,
 } from "./storage";
 
-const EXERCISE_STEPS = [57, 59, 60, 62, 64, 65, 67, 69, 71, 72];
+const EXERCISE_STEPS = [0, 1, 2, 3, 5, 7, 8, 10, 12];
+const DEFAULT_COMFORT_ANCHOR = 52;
 
 const PRACTICE_FLOW = [
   {
     id: "warmup",
     label: "Warmup",
-    title: "Gentle forward hum",
-    prompt: "Hum softly on mmm, then open to mee without getting louder.",
+    title: "Easy sound exploration",
+    prompt: "Use a soft hum, oo, vv, or lip trill. Keep it smooth; this is exploration, not a test.",
     target: "Comfort first",
     icon: HeartPulse,
   },
   {
     id: "pitch",
     label: "Pitch",
-    title: "Comfort pitch ladder",
-    prompt: "Hear the tone, match it on ee, then repeat at the same effort.",
+    title: "Light pitch exploration",
+    prompt: "Hear the tone, glide toward it, and settle on a light ee. A close, easy match is enough to advance.",
     target: "Accurate and easy",
     icon: Target,
   },
   {
     id: "resonance",
     label: "Resonance",
-    title: "Bright resonance hold",
-    prompt: "Keep the pitch steady while moving the buzz forward toward lips and teeth.",
+    title: "Brightness exploration",
+    prompt: "Keep an easy pitch, then explore lighter and brighter vowel colours. Your ears decide, not throat sensations.",
     target: "Clearer, not louder",
     icon: Sparkles,
   },
@@ -72,7 +75,7 @@ const PRACTICE_FLOW = [
     id: "speech",
     label: "Speech",
     title: "Speech transfer",
-    prompt: 'Say "hey, I am here" near the target note with the same bright shape.',
+    prompt: 'Say "hey, I am here" near the target note with the same light, clear quality.',
     target: "Carryover",
     icon: Waves,
   },
@@ -110,9 +113,9 @@ const HUM_DRILLS = [
 ];
 
 const MODE_LABELS = {
-  "comfort-ladder": "Comfort pitch ladder",
-  "resonance-step": "Bright resonance hold",
-  "speech-floor": "Speech floor support",
+  "comfort-ladder": "Light pitch exploration",
+  "resonance-step": "Brightness exploration",
+  "speech-floor": "Speech transfer",
 };
 
 const PRACTICE_TIERS = {
@@ -136,6 +139,13 @@ const PRACTICE_TIERS = {
   },
 };
 
+const LEARNING_RESOURCES = [
+  { label: "Voice Resource Project", detail: "Structured starting point: pitch, vocal weight, resonance, clarity, and practice.", href: "https://wiki.sumianvoice.com/wiki/pages/getting-started/", kind: "Community guide" },
+  { label: "TransVoiceParty", detail: "A broad, maintained directory of teachers, communities, tools, and public lessons.", href: "https://transvoice.party/", kind: "Resource directory" },
+  { label: "Trans Voice Lessons", detail: "Listening-focused lessons from Zheanna, Clover, and Vivienne.", href: "https://www.youtube.com/@TransVoiceLessons/videos", kind: "Video library" },
+  { label: "UCSF voice and communication", detail: "Clinical context for pitch, resonance, intonation, and vocal health.", href: "https://transcare.ucsf.edu/guidelines/vocal-health", kind: "Clinical reading" },
+];
+
 export default function App() {
   const [deviceId] = useState(getDeviceId);
   const [listening, setListening] = useState(false);
@@ -148,6 +158,7 @@ export default function App() {
   const [exerciseMode, setExerciseMode] = useState(() => loadProgress().lastMode ?? "comfort-ladder");
   const [activeStep, setActiveStep] = useState(() => loadProgress().lastStep ?? "warmup");
   const [practiceTier, setPracticeTier] = useState(() => loadProgress().practiceTier ?? "starter");
+  const [comfortAnchorMidi, setComfortAnchorMidi] = useState(() => loadProgress().comfortAnchorMidi ?? null);
   const [humDrillIndex, setHumDrillIndex] = useState(0);
   const [lastScore, setLastScore] = useState(null);
   const [isPlayingTone, setIsPlayingTone] = useState(false);
@@ -172,10 +183,12 @@ export default function App() {
     if (exerciseMode === "speech-floor" && dailySession.lowMidi !== null) {
       return Math.max(52, Math.min(64, dailySession.lowMidi + 2));
     }
-    return EXERCISE_STEPS[targetIndex] ?? EXERCISE_STEPS[0];
-  }, [dailySession.highMidi, dailySession.lowMidi, exerciseMode, targetIndex]);
+    return (comfortAnchorMidi ?? DEFAULT_COMFORT_ANCHOR) + (EXERCISE_STEPS[targetIndex] ?? EXERCISE_STEPS[0]);
+  }, [comfortAnchorMidi, dailySession.highMidi, dailySession.lowMidi, exerciseMode, targetIndex]);
 
   const targetFrequency = midiToFrequency(targetMidi);
+  const rememberedTargetMidi = (progress.comfortAnchorMidi ?? DEFAULT_COMFORT_ANCHOR)
+    + (EXERCISE_STEPS[progress.lastTargetIndex] ?? EXERCISE_STEPS[0]);
   const currentMidi = current.frequency ? frequencyToMidi(current.frequency) : null;
   const currentCents = current.frequency ? centsOff(current.frequency, targetFrequency) : null;
   const sessionStats = useMemo(() => summarizeSession(history, current, dailySession), [history, current, dailySession]);
@@ -197,6 +210,13 @@ export default function App() {
     recordingAttempt,
     lastScore,
   });
+  const targetExplanation = getTargetExplanation({
+    exerciseMode,
+    targetIndex,
+    comfortAnchorMidi,
+    targetMidi,
+    lastScore,
+  });
 
   useEffect(() => {
     saveTodaySession(dailySession);
@@ -205,6 +225,7 @@ export default function App() {
       activeStep,
       exerciseMode,
       practiceTier,
+      comfortAnchorMidi,
     }));
   }, [dailySession]);
 
@@ -214,6 +235,7 @@ export default function App() {
       activeStep,
       exerciseMode,
       practiceTier,
+      comfortAnchorMidi,
     }));
   }, [targetIndex, activeStep, exerciseMode, practiceTier]);
 
@@ -245,6 +267,7 @@ export default function App() {
           setActiveStep(merged.lastStep ?? "warmup");
           setExerciseMode(merged.lastMode ?? "comfort-ladder");
           setPracticeTier(merged.practiceTier ?? "starter");
+          setComfortAnchorMidi(merged.comfortAnchorMidi ?? null);
         }
         setSyncStatus("synced");
       })
@@ -262,6 +285,16 @@ export default function App() {
   useEffect(() => {
     drawVisualizer();
   }, [history, targetFrequency, current.frequency]);
+
+  useEffect(() => {
+    if (comfortAnchorMidi !== null) return;
+    const voiced = history.filter((sample) => sample.frequency && sample.clarity > 0.55).slice(-36);
+    if (voiced.length < 12) return;
+    const midis = voiced.map((sample) => frequencyToMidi(sample.frequency)).sort((a, b) => a - b);
+    const median = midis[Math.floor(midis.length / 2)];
+    // Begin only a tiny step above the easy hum, never with a high preset.
+    setComfortAnchorMidi(Math.max(48, Math.min(57, median + 1)));
+  }, [comfortAnchorMidi, history]);
 
   useEffect(() => () => stopListening(), []);
 
@@ -374,7 +407,7 @@ export default function App() {
       const enriched = { ...result, mode: exerciseMode, step: activeStep, time: Date.now() };
       setLastScore(enriched);
       setDailySession((session) => ({ ...session, attempts: [...session.attempts.slice(-17), enriched] }));
-      if (result.score >= 86 && activeStep === "pitch") {
+      if (result.matched && activeStep === "pitch") {
         setTargetIndex((index) => Math.min(EXERCISE_STEPS.length - 1, index + 1));
       }
     }, 3000);
@@ -398,6 +431,11 @@ export default function App() {
 
   function nextHumDrill() {
     setHumDrillIndex((index) => (index + 1) % HUM_DRILLS.length);
+  }
+
+  function moveTarget(direction) {
+    setTargetIndex((index) => Math.max(0, Math.min(EXERCISE_STEPS.length - 1, index + direction)));
+    setLastScore(null);
   }
 
   function drawVisualizer() {
@@ -478,8 +516,8 @@ export default function App() {
           <p className="eyebrow">LuovaVoice</p>
           <h1>Build a transfemme voice that feels bright, easy, and yours.</h1>
           <p className="hero-copy">
-            Real-time pitch tracking, gentle AI-style coaching, and guided drills for resonance, pitch comfort,
-            and speech carryover. Stop if you feel pain, scratchiness, or fatigue.
+            Real-time pitch tracking and guided listening drills for weight, pitch comfort, brightness, and speech
+            carryover. This is a practice companion, not a diagnosis: stop for pain, scratchiness, or fatigue.
           </p>
         </div>
         <div className="hero-actions">
@@ -541,7 +579,7 @@ export default function App() {
       <section className="progress-dashboard" aria-label="Progress over time">
         <div className="progress-summary">
           <p className="eyebrow">Progress memory</p>
-          <h2>Last time you reached {midiToNoteName(EXERCISE_STEPS[progress.lastTargetIndex] ?? EXERCISE_STEPS[0])} in {MODE_LABELS[progress.lastMode]}.</h2>
+          <h2>Last time you reached {midiToNoteName(rememberedTargetMidi)} in {MODE_LABELS[progress.lastMode]}.</h2>
           <p>
             Best saved range: {formatRange(progress.bestLowMidi, progress.bestHighMidi)}.
             {progress.bestScore !== null ? ` Best scored repeat: ${progress.bestScore}/100 on ${progress.bestScoreNote}.` : " Score a repeat to start building your history."}
@@ -629,7 +667,7 @@ export default function App() {
               <h2>{activePractice.title}</h2>
               <p>{activePractice.prompt}</p>
             </div>
-            <span className={Math.abs(currentCents ?? 999) <= 18 ? "status good" : "status"}>
+            <span className={Math.abs(currentCents ?? 999) <= 55 ? "status good" : "status"}>
               {currentCents === null ? "Waiting" : `${currentCents > 0 ? "+" : ""}${currentCents} cents`}
             </span>
           </div>
@@ -638,22 +676,29 @@ export default function App() {
             <label>
               Mode
               <select value={exerciseMode} onChange={(event) => setExerciseMode(event.target.value)}>
-                <option value="comfort-ladder">Comfort pitch ladder</option>
-                <option value="resonance-step">Bright resonance hold</option>
-                <option value="speech-floor">Speech floor support</option>
+                <option value="comfort-ladder">Light pitch exploration</option>
+                <option value="resonance-step">Brightness exploration</option>
+                <option value="speech-floor">Speech transfer</option>
               </select>
             </label>
             <div className="target-chip">
               <span>Target</span>
               <strong>{midiToNoteName(targetMidi)}</strong>
+              <small>{Math.round(targetFrequency)} Hz</small>
             </div>
+            <button className="icon-action" onClick={() => moveTarget(-1)} disabled={targetIndex === 0} aria-label="Use an easier target" title="Use an easier target">
+              <ChevronLeft />
+            </button>
             <button onClick={playTone} disabled={isPlayingTone}>
               <Volume2 />
               Play tone
             </button>
             <button className="primary-action" onClick={beginAttempt} disabled={recordingAttempt}>
               <Target />
-              {recordingAttempt ? "Listening..." : "Score repeat"}
+              {recordingAttempt ? "Listening..." : "Try 3-second match"}
+            </button>
+            <button className="icon-action" onClick={() => moveTarget(1)} disabled={targetIndex === EXERCISE_STEPS.length - 1} aria-label="Try the next small step" title="Try the next small step">
+              <ChevronRight />
             </button>
           </div>
 
@@ -661,6 +706,24 @@ export default function App() {
             <strong>{beginnerInstruction.action}</strong>
             <span>{beginnerInstruction.why}</span>
           </div>
+
+          <section className="animated-guide" aria-label="How the pitch guide works">
+            <div className="guide-orbit" style={{ "--pitch-position": `${Math.max(5, Math.min(95, 50 - (currentCents ?? 0) / 3.5))}%` }}>
+              <span className="guide-target" />
+              <span className="guide-voice" />
+              <span className="guide-window" />
+            </div>
+            <div className="guide-copy">
+              <p className="eyebrow">Why this target?</p>
+              <h3>{targetExplanation.title}</h3>
+              <p>{targetExplanation.text}</p>
+              <small>{targetExplanation.change}</small>
+            </div>
+            <div className="guide-legend" aria-label="Pitch guide legend">
+              <span><i className="voice-dot" /> Your live pitch</span>
+              <span><i className="target-dot" /> Gentle match zone (+/- 55 cents)</span>
+            </div>
+          </section>
 
           <div className="hum-circuit" aria-label="Guided humming warmup">
             <div className="hum-circuit-heading">
@@ -686,6 +749,12 @@ export default function App() {
                 Next hum
               </button>
             </div>
+          </div>
+
+          <div className="practice-principles" aria-label="Training principles">
+            <div><strong>Listen first</strong><span>Try a sound, notice its colour, then try a small change.</span></div>
+            <div><strong>Explore, do not force</strong><span>No larynx pushing, swallowing drills, or chasing a number.</span></div>
+            <div><strong>Transfer it</strong><span>After a drill, use a short phrase before changing anything again.</span></div>
           </div>
 
           {recordingAttempt && (
@@ -734,14 +803,14 @@ export default function App() {
             <Readout label="Goal" value={activePractice.target} />
             <Readout label="Tier" value={`${activeTier.label} ${activeTier.minutes} min`} />
             <Readout label="Session" value={`${dailySession.attempts.length} scored repeats`} />
-            <Readout label="Remembered target" value={midiToNoteName(EXERCISE_STEPS[progress.lastTargetIndex] ?? EXERCISE_STEPS[0])} />
+            <Readout label="Remembered target" value={midiToNoteName(rememberedTargetMidi)} />
           </div>
 
           <div className="lesson-card">
             <h3><Timer /> What matters</h3>
             <p>
-              For transfemme voice, pitch helps, but it is not the whole voice. This app coaches toward
-              comfortable pitch, brighter resonance, steady airflow, and speech habits you can actually keep.
+              Pitch helps, but it is not the whole voice. This app measures pitch, steadiness, and level; it cannot
+              measure resonance or vocal weight for you. Use the listening prompts to explore those safely.
             </p>
           </div>
 
@@ -754,6 +823,19 @@ export default function App() {
                   <p>{tip.text}</p>
                 </div>
               </div>
+            ))}
+          </div>
+
+          <div className="resource-library">
+            <p className="eyebrow">Learn by ear</p>
+            <h3>Helpful next listening</h3>
+            <p>Different teachers use different vocabulary. Keep what sounds easy and sustainable, and skip anything that asks you to force or manually move your throat.</p>
+            {LEARNING_RESOURCES.map((resource) => (
+              <a href={resource.href} target="_blank" rel="noreferrer" key={resource.href}>
+                <span>{resource.kind}</span>
+                <strong>{resource.label}</strong>
+                <small>{resource.detail}</small>
+              </a>
             ))}
           </div>
 
@@ -903,6 +985,38 @@ function calculateStreak(days) {
   return streak;
 }
 
+function getTargetExplanation({ exerciseMode, targetIndex, comfortAnchorMidi, targetMidi, lastScore }) {
+  if (exerciseMode === "resonance-step") {
+    return {
+      title: `A steady reference at ${midiToNoteName(targetMidi)}`,
+      text: "This note is only an anchor so you can hear changes in brightness without changing everything at once.",
+      change: "This target follows the highest easy note you mapped today. Change it manually whenever it stops feeling easy.",
+    };
+  }
+  if (exerciseMode === "speech-floor") {
+    return {
+      title: `A speech-friendly reference at ${midiToNoteName(targetMidi)}`,
+      text: "Speech naturally moves around. Aim near this note, then let the phrase have normal movement instead of holding it flat.",
+      change: "This reference uses today’s lower mapped note when available, so it stays connected to your usable voice.",
+    };
+  }
+  const base = comfortAnchorMidi === null ? "a gentle starter note" : `your easy-hum anchor, ${midiToNoteName(comfortAnchorMidi)}`;
+  if (lastScore?.matched) {
+    return {
+      title: `One small step above ${base}`,
+      text: "You made a close, steady match, so the ladder offered the next small interval. It is an invitation, not a requirement.",
+      change: "The target changes only after a close, easy 3-second match, or when you press the arrow buttons. Go back any time.",
+    };
+  }
+  return {
+    title: `Starting from ${base}`,
+    text: "The app waits for an easy hum, then begins just a little above it. It is training control and comfort before range.",
+    change: targetIndex === 0
+      ? "Give the mic a few seconds of a clear, easy hum. A close, steady match unlocks one small step upward."
+      : "The target changes only after a close, easy 3-second match, or when you press the arrow buttons. Go back any time.",
+  };
+}
+
 function getBeginnerInstruction({ activeStep, listening, current, currentCents, recordingAttempt, lastScore }) {
   if (!listening) {
     return {
@@ -928,7 +1042,7 @@ function getBeginnerInstruction({ activeStep, listening, current, currentCents, 
       why: "A calm, repeatable voice matters more than forcing a perfect score.",
     };
   }
-  if (lastScore?.score >= 86) {
+  if (lastScore?.matched) {
     return {
       title: "Nice. Keep the feeling, not just the note.",
       text: "You matched the target well. Now try saying the short phrase while preserving the same light resonance.",
