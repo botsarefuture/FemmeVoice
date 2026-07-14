@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Coffee,
+  ExternalLink,
   Gauge,
   HeartPulse,
   Mic,
@@ -139,11 +140,38 @@ const PRACTICE_TIERS = {
   },
 };
 
+const RESOURCE_FILTERS = [
+  { id: "start", label: "Start here" },
+  { id: "foundations", label: "Foundations" },
+  { id: "practice", label: "Practice" },
+  { id: "listening", label: "Listening & mimicry" },
+  { id: "tools", label: "Tools" },
+  { id: "safety", label: "Vocal health" },
+  { id: "all", label: "Everything" },
+];
+
 const LEARNING_RESOURCES = [
-  { label: "Voice Resource Project", detail: "Structured starting point: pitch, vocal weight, resonance, clarity, and practice.", href: "https://wiki.sumianvoice.com/wiki/pages/getting-started/", kind: "Community guide" },
-  { label: "TransVoiceParty", detail: "A broad, maintained directory of teachers, communities, tools, and public lessons.", href: "https://transvoice.party/", kind: "Resource directory" },
-  { label: "Trans Voice Lessons", detail: "Listening-focused lessons from Zheanna, Clover, and Vivienne.", href: "https://www.youtube.com/@TransVoiceLessons/videos", kind: "Video library" },
-  { label: "UCSF voice and communication", detail: "Clinical context for pitch, resonance, intonation, and vocal health.", href: "https://transcare.ucsf.edu/guidelines/vocal-health", kind: "Clinical reading" },
+  { category: "start", label: "Voice Resource Project: Getting Started", kind: "Community guide", detail: "A calm overview of voice feminisation, how to practise, and what to avoid. Read this first when the vocabulary feels new.", href: "https://wiki.sumianvoice.com/wiki/pages/getting-started/" },
+  { category: "start", label: "Introductory Voice Training Resources", kind: "Community guide", detail: "A broad beginner roadmap: learn to hear, gain control, then explore and iterate. Includes warmup and practice ideas.", href: "https://www.reddit.com/r/transvoice/comments/mgaci7/solid_introductory_voice_training_resources/" },
+  { category: "start", label: "Trans Voice Lessons video library", kind: "Video library", detail: "A large collection from Zheanna, Clover, and Vivienne. Pick one short video at a time instead of trying to learn everything at once.", href: "https://www.youtube.com/@TransVoiceLessons/videos" },
+  { category: "foundations", label: "How important is pitch?", kind: "Plain-language explainer", detail: "Pitch is useful, but it is only one cue. This helps put pitch, vocal weight, resonance, clarity, and speech habits in perspective.", href: "https://wiki.sumianvoice.com/wiki/pages/getting-started/" },
+  { category: "foundations", label: "Hear size and resonance", kind: "Video", detail: "A listening lesson for noticing changes in resonance or perceived size without trying to manually move anything in the throat.", href: "https://youtu.be/oWmj73Ttp4E" },
+  { category: "foundations", label: "Cram Voice Lessons", kind: "Articles", detail: "A large independent collection of voice articles and perspectives. Useful for comparing explanations after you have a gentle foundation.", href: "https://cramdvoicelessons.blog/" },
+  { category: "practice", label: "Practice advice from Trans Voice Lessons", kind: "Video", detail: "How to make practice regular, exploratory, and sustainable instead of drilling until you are exhausted.", href: "https://www.youtube.com/watch?v=fylIX28mlyY" },
+  { category: "practice", label: "Kin Maynard: how to practise", kind: "Community guide", detail: "A practical discussion of routines, expectations, and making voice practice part of ordinary life.", href: "https://www.reddit.com/r/transvoice/comments/1c5lveq/how_to_voice_train/" },
+  { category: "practice", label: "Ear-training livestream", kind: "Video", detail: "Practice recognising pitch and sound changes before trying to control them. Good for days when speaking practice feels like too much.", href: "https://youtu.be/rvet1PwCoGY" },
+  { category: "practice", label: "Tone generator", kind: "Practice tool", detail: "Use a quiet reference tone for matching or small slides. Start close to your comfortable voice; a high number is never the goal by itself.", href: "https://www.szynalski.com/tone-generator/" },
+  { category: "listening", label: "Selene Da Silva clip collection", kind: "Listening library", detail: "An organised collection of short demonstrations. Listen for one feature at a time, then copy only a tiny piece of it.", href: "https://www.reddit.com/r/transvoice/comments/ztdtll/an_organized_collection_of_selene_da_silvas_clips/" },
+  { category: "listening", label: "Jana: mimicry advice", kind: "Community guide", detail: "A guide to using a reference voice as an ear-training target, not as a demand to sound exactly like someone else.", href: "https://docs.google.com/document/d/1H49fFxiLw4C7OisG1yy0-9dQIH373UX0Il1ybV8Gju8/edit" },
+  { category: "listening", label: "Find a voice example", kind: "Practice idea", detail: "Choose a voice that feels like a reachable next step. Copy its rhythm or vowel colour for one short phrase, then rest.", href: "https://wiki.sumianvoice.com/wiki/pages/getting-started/" },
+  { category: "tools", label: "InFormant", kind: "Desktop analysis tool", detail: "Real-time pitch and formant tracking for people who want to see more acoustic information while they practise.", href: "https://in-formant.app/" },
+  { category: "tools", label: "Spectrus", kind: "Web analysis tool", detail: "A browser-based tool for pitch and formant tracking. Treat visuals as feedback, not a score you need to win.", href: "https://spec.sumianvoice.com/" },
+  { category: "tools", label: "AcousticGender", kind: "Recording analysis", detail: "A way to inspect pitch and resonance-related information from recorded clips when you want to compare takes.", href: "https://acousticgender.space/" },
+  { category: "tools", label: "TransVoiceParty", kind: "Resource directory", detail: "A broad directory of teachers, communities, tools, recorded lessons, and other places to keep learning.", href: "https://transvoice.party/" },
+  { category: "safety", label: "UCSF: vocal health and considerations", kind: "Clinical reading", detail: "Clear clinical context for pitch, resonance, intonation, fatigue, and why a comfortable voice matters more than forcing a result.", href: "https://transcare.ucsf.edu/guidelines/vocal-health" },
+  { category: "safety", label: "ASHA: gender-affirming voice and communication", kind: "Clinical reading", detail: "An overview from speech-language pathologists on client-led goals, vocal health, and the many parts of communication beyond pitch.", href: "https://www.asha.org/public/speech/disorders/Voice-and-Communication-Change-for-Transgender-People/" },
+  { category: "safety", label: "Common voice-training myths", kind: "Video", detail: "Helpful context for separating sound-based exploration from rules that encourage strain or overly rigid technique.", href: "https://www.youtube.com/watch?v=gHyVNIcw_XI" },
+  { category: "safety", label: "Older guides, read with care", kind: "Historical context", detail: "Older material can be interesting for ideas, but skip any instruction that asks you to swallow, force the larynx, or work through pain.", href: "https://docs.google.com/document/d/1MOd5CJQUGmUD5e1p7_CLxWLU-aFiUTmKvL0SoT-LhEk/edit" },
 ];
 
 export default function App() {
@@ -166,6 +194,7 @@ export default function App() {
   const [attemptProgress, setAttemptProgress] = useState(0);
   const [syncStatus, setSyncStatus] = useState("local");
   const [authInfo, setAuthInfo] = useState({ authenticated: false, user: null });
+  const [resourceFilter, setResourceFilter] = useState("start");
 
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -217,6 +246,9 @@ export default function App() {
     targetMidi,
     lastScore,
   });
+  const visibleResources = resourceFilter === "all"
+    ? LEARNING_RESOURCES
+    : LEARNING_RESOURCES.filter((resource) => resource.category === resourceFilter);
 
   useEffect(() => {
     saveTodaySession(dailySession);
@@ -708,7 +740,7 @@ export default function App() {
           </div>
 
           <section className="animated-guide" aria-label="How the pitch guide works">
-            <div className="guide-orbit" style={{ "--pitch-position": `${Math.max(5, Math.min(95, 50 - (currentCents ?? 0) / 3.5))}%` }}>
+            <div className="guide-orbit" style={{ "--pitch-position": `${Math.max(5, Math.min(95, 50 + (currentCents ?? 0) / 3.5))}%` }}>
               <span className="guide-target" />
               <span className="guide-voice" />
               <span className="guide-window" />
@@ -826,19 +858,6 @@ export default function App() {
             ))}
           </div>
 
-          <div className="resource-library">
-            <p className="eyebrow">Learn by ear</p>
-            <h3>Helpful next listening</h3>
-            <p>Different teachers use different vocabulary. Keep what sounds easy and sustainable, and skip anything that asks you to force or manually move your throat.</p>
-            {LEARNING_RESOURCES.map((resource) => (
-              <a href={resource.href} target="_blank" rel="noreferrer" key={resource.href}>
-                <span>{resource.kind}</span>
-                <strong>{resource.label}</strong>
-                <small>{resource.detail}</small>
-              </a>
-            ))}
-          </div>
-
           <div className="attempt-log">
             <h3>Recent attempts</h3>
             {dailySession.attempts.length === 0 ? (
@@ -854,6 +873,47 @@ export default function App() {
             )}
           </div>
         </aside>
+      </section>
+
+      <section className="learning-library" aria-label="Voice-training learning library">
+        <div className="library-heading">
+          <div>
+            <p className="eyebrow">Learning library</p>
+            <h2>Learn one useful thing, then try it.</h2>
+            <p>This is a map, not homework. Choose one small idea, explore it gently, and return when you are curious about the next one.</p>
+          </div>
+          <span>{LEARNING_RESOURCES.length} carefully selected starting points</span>
+        </div>
+
+        <div className="library-path" aria-label="A simple starting path">
+          <article><b>1</b><strong>Listen</strong><span>Learn to hear one sound difference before trying to control it.</span></article>
+          <article><b>2</b><strong>Explore</strong><span>Make a small, easy change with hums, vowels, or a short tone.</span></article>
+          <article><b>3</b><strong>Use it</strong><span>Carry one comfortable change into a short phrase or ordinary conversation.</span></article>
+        </div>
+
+        <div className="resource-filter" role="tablist" aria-label="Resource topics">
+          {RESOURCE_FILTERS.map((filter) => (
+            <button
+              className={resourceFilter === filter.id ? "selected" : ""}
+              key={filter.id}
+              onClick={() => setResourceFilter(filter.id)}
+              role="tab"
+              aria-selected={resourceFilter === filter.id}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="resource-grid" role="tabpanel">
+          {visibleResources.map((resource) => (
+            <a href={resource.href} target="_blank" rel="noreferrer" key={resource.label}>
+              <span>{resource.kind}</span>
+              <h3>{resource.label} <ExternalLink /></h3>
+              <p>{resource.detail}</p>
+            </a>
+          ))}
+        </div>
       </section>
     </main>
   );
