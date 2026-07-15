@@ -57,6 +57,10 @@ import { APP_VERSION } from "./version";
 const EXERCISE_STEPS = [0, 1, 2, 3, 5, 7, 8, 10, 12];
 const DEFAULT_COMFORT_ANCHOR = 52;
 const MAX_TRAINING_MIDI = 77;
+const REMINDER_DAYS = [
+  { value: 0, label: "Mon" }, { value: 1, label: "Tue" }, { value: 2, label: "Wed" }, { value: 3, label: "Thu" },
+  { value: 4, label: "Fri" }, { value: 5, label: "Sat" }, { value: 6, label: "Sun" },
+];
 
 const APP_VIEWS = [
   { id: "today", label: "Today", icon: HeartPulse },
@@ -374,7 +378,7 @@ export default function App() {
   const [privacyStatus, setPrivacyStatus] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [emailSubmitting, setEmailSubmitting] = useState(false);
-  const [reminderSettings, setReminderSettings] = useState({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
+  const [reminderSettings, setReminderSettings] = useState({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", days: [0, 1, 2, 3, 4, 5, 6], tone: "gentle" });
   const [reminderSubmitting, setReminderSubmitting] = useState(false);
   const [reminderStatus, setReminderStatus] = useState("");
   const [feedbackForm, setFeedbackForm] = useState({ category: "idea", message: "" });
@@ -590,7 +594,7 @@ export default function App() {
 
   useEffect(() => {
     if (!authInfo.authenticated) {
-      setReminderSettings({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
+      setReminderSettings({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", days: [0, 1, 2, 3, 4, 5, 6], tone: "gentle" });
       return;
     }
     let cancelled = false;
@@ -1168,7 +1172,7 @@ export default function App() {
       setReminderStatus("");
       const settings = await saveReminderSettings(reminderSettings);
       setReminderSettings(settings);
-      setReminderStatus(settings.enabled ? `A gentle daily reminder will arrive at ${settings.time}.` : "Daily reminder emails are off.");
+      setReminderStatus(settings.enabled ? `Your ${settings.tone} reminder will arrive near ${settings.time} on ${formatReminderDays(settings.days)}. It will skip days where FemmeVoice already has practice saved.` : "Practice reminder emails are off.");
     } catch (error) {
       setReminderStatus(error.message);
     } finally {
@@ -1916,9 +1920,9 @@ export default function App() {
             <p>Suggest a source, flag wording that feels unclear or harmful, share a community resource, or improve the guide directly. We welcome lived experience alongside research, and label each clearly.</p>
           </div>
           <div className="contribution-actions">
-            <a href="https://github.com/botsarefuture/voice-luova-club/blob/main/docs/research-guide.md" target="_blank" rel="noreferrer">Read the full guide <ExternalLink /></a>
-            <a href="https://github.com/botsarefuture/voice-luova-club/issues/new?template=research-source.yml" target="_blank" rel="noreferrer">Suggest a source <ExternalLink /></a>
-            <a href="https://github.com/botsarefuture/voice-luova-club/pulls" target="_blank" rel="noreferrer">Open a pull request <ExternalLink /></a>
+            <a href="https://github.com/botsarefuture/FemmeVoice/blob/main/docs/research-guide.md" target="_blank" rel="noreferrer">Read the full guide <ExternalLink /></a>
+            <a href="https://github.com/botsarefuture/FemmeVoice/issues/new?template=research-source.yml" target="_blank" rel="noreferrer">Suggest a source <ExternalLink /></a>
+            <a href="https://github.com/botsarefuture/FemmeVoice/pulls" target="_blank" rel="noreferrer">Open a pull request <ExternalLink /></a>
             <a href="https://discord.gg/Vh5N2WEJtU" target="_blank" rel="noreferrer">Discuss in the community <MessageCircle /></a>
           </div>
           <small>Please include a direct link, describe what it supports, name conflicts of interest where known, and avoid advice that asks people to force or manually manipulate the larynx.</small>
@@ -1971,12 +1975,15 @@ export default function App() {
         <div>
           <p className="eyebrow">Practice reminders</p>
           <h3>Make practice easier to remember</h3>
-          <p>{authInfo.user?.email_verified ? "Choose one gentle daily email in your local time. It is off unless you turn it on, and you can stop it here at any time." : "Verify a recovery email first. FemmeVoice will never send practice reminders until you explicitly turn them on."}</p>
+          <p>{authInfo.user?.email_verified ? "Choose days and a time that fit your life. Reminders are opt-in, arrive near your local time, and stay quiet after you have already practised that day." : "Verify a recovery email first. FemmeVoice will never send practice reminders until you explicitly turn them on."}</p>
         </div>
         {authInfo.user?.email_verified ? <form className="email-form reminder-form" onSubmit={updateReminderSettings}>
-          <label className="checkbox-row"><input type="checkbox" checked={reminderSettings.enabled} onChange={(event) => setReminderSettings((current) => ({ ...current, enabled: event.target.checked }))} /> Send me a daily practice reminder</label>
+          <label className="checkbox-row"><input type="checkbox" checked={reminderSettings.enabled} onChange={(event) => setReminderSettings((current) => ({ ...current, enabled: event.target.checked }))} /> Send me practice reminders</label>
           <label>Time<input type="time" value={reminderSettings.time} onChange={(event) => setReminderSettings((current) => ({ ...current, time: event.target.value }))} disabled={!reminderSettings.enabled || reminderSubmitting} /></label>
-          <button className="primary-action" disabled={reminderSubmitting}>{reminderSubmitting ? "Saving..." : "Save reminder"}</button>
+          <label>Reminder style<select value={reminderSettings.tone} onChange={(event) => setReminderSettings((current) => ({ ...current, tone: event.target.value }))} disabled={!reminderSettings.enabled || reminderSubmitting}><option value="gentle">Gentle and no-pressure</option><option value="steady">Steady practice cue</option><option value="encouraging">Encouraging nudge</option></select></label>
+          <fieldset className="reminder-days" disabled={!reminderSettings.enabled || reminderSubmitting}><legend>Reminder days</legend><div>{REMINDER_DAYS.map((day) => <label key={day.value}><input type="checkbox" checked={reminderSettings.days.includes(day.value)} onChange={(event) => setReminderSettings((current) => ({ ...current, days: event.target.checked ? [...current.days, day.value].sort((a, b) => a - b) : current.days.filter((value) => value !== day.value) }))} /> {day.label}</label>)}</div></fieldset>
+          <small className="reminder-help">No email is sent after FemmeVoice has already saved practice for that local day.</small>
+          <button className="primary-action" disabled={reminderSubmitting || (reminderSettings.enabled && reminderSettings.days.length === 0)}>{reminderSubmitting ? "Saving..." : "Save reminder"}</button>
         </form> : null}
         {reminderStatus && <p className="privacy-status">{reminderStatus}</p>}
       </section>}
@@ -2059,7 +2066,7 @@ export default function App() {
         <div className="privacy-policy-heading"><ShieldCheck /><div><p className="eyebrow">Privacy policy</p><h2>Your voice stays yours.</h2><p>Effective 15 July 2026. FemmeVoice is a practice companion, not a diagnostic or therapy service.</p></div></div>
         <div className="privacy-policy-text">
           <section><h3>Who is responsible</h3><p>Emilia Vuorenmaa is the controller for FemmeVoice. Contact: <a href="mailto:emilia@luova.club">emilia@luova.club</a>.</p></section>
-          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to. We send practice reminder email only when you have explicitly enabled it in Settings.</p></section>
+          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to. We send practice reminder email only when you have explicitly enabled it in Settings, and use the saved practice date only to avoid sending a redundant reminder after you have already practised that day.</p></section>
           <section><h3>Microphone and recordings</h3><p>Pitch analysis happens in your browser. FemmeVoice does not record or upload audio unless you explicitly turn on automatic recording or start a recording yourself. When the private vault is unlocked and automatic recording is enabled, FemmeVoice records voiced parts of practice and skips quiet gaps. Before an audio note is uploaded, it is encrypted in your browser. We store the encrypted audio plus the label, date, duration, file type, size, and technical encryption information needed to retrieve it. We cannot play the audio.</p></section>
           <section><h3>Your control</h3><p>You can turn automatic recording off in Settings, discard a take, delete individual recordings, export account and progress data, or permanently delete your account. Account data stays until deletion; security records are kept only as long as needed for security and operations.</p></section>
           <section><h3>Sharing and security</h3><p>Only infrastructure providers needed to host FemmeVoice and its database process data for us. We do not sell data, use advertising, or profile people for marketing. We use HTTPS, secure session cookies, CSRF protection, password hashing, access controls, and data minimisation. No security measure is absolute.</p></section>
@@ -2250,6 +2257,13 @@ function formatTrainingTime(seconds) {
   const minutes = Math.floor(safeSeconds / 60);
   const remainder = safeSeconds % 60;
   return `${minutes} min${remainder ? ` ${remainder} sec` : ""} of practice`;
+}
+
+function formatReminderDays(days) {
+  const selected = REMINDER_DAYS.filter((day) => days.includes(day.value));
+  if (selected.length === REMINDER_DAYS.length) return "every day";
+  if (selected.length === 5 && selected.every((day) => day.value < 5)) return "weekdays";
+  return selected.map((day) => day.label).join(", ");
 }
 
 function recordingAad(username, recordingId, mimeType) {

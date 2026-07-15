@@ -284,6 +284,16 @@ svg {
 .data-rights p:not(.eyebrow) { margin-top: 6px; color: #525a54; }
 .email-form { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
 .email-form input { min-height: 44px; min-width: 220px; border: 1px solid rgba(35, 38, 34, 0.2); border-radius: 8px; padding: 0 11px; background: #fffdf8; }
+.email-form select { min-height: 44px; border: 1px solid rgba(35, 38, 34, 0.2); border-radius: 8px; padding: 0 11px; background: #fffdf8; color: #232622; }
+.reminder-form { align-items: end; }
+.reminder-form > label { display: grid; gap: 5px; color: #55615b; font-size: 0.84rem; font-weight: 720; }
+.reminder-form > label.checkbox-row { display: flex; }
+.reminder-days { flex: 1 0 100%; margin: 0; border: 0; padding: 0; }
+.reminder-days legend { margin-bottom: 6px; color: #55615b; font-size: 0.84rem; font-weight: 720; }
+.reminder-days > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.reminder-days label { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; border: 1px solid rgba(35, 38, 34, 0.13); border-radius: 8px; padding: 0 9px; color: #3a443e; background: rgba(35, 38, 34, 0.04); font-weight: 720; }
+.reminder-days input { min-width: auto; min-height: auto; accent-color: #218e7e; }
+.reminder-help { flex: 1 0 100%; color: #68736d; font-size: 0.82rem; }
 
 .account-settings-grid {
   display: grid;

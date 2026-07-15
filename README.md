@@ -4,7 +4,7 @@ An open-source, transfemme-focused voice-training practice companion.
 
 Contributions are welcome through issues and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before contributing.
 
-The evidence, safety boundaries, and feature-design principles are public in the [Research and Practice Guide](docs/research-guide.md). It is the source of truth for training-related product changes.
+The evidence, safety boundaries, and feature-design principles are public in the [Research and Practice Guide](docs/research-guide.md). It is the source of truth for training-related product changes. The [iOS Readiness Plan](docs/ios-readiness.md) documents the decisions that keep a future native app possible without a rewrite.
 
 FemmeVoice is released under the [MIT License](LICENSE).
 
@@ -37,5 +37,10 @@ npm run dev -- --port 5178
 
 ```bash
 npm run build
+python3 -m unittest discover -s server -p 'test_*.py'
 python3 -m py_compile server/app.py server/wsgi.py
 ```
+
+## Versioning
+
+Every pushed update must increase the semantic version in `package.json`; `npm run check:version` keeps it aligned with `src/version.js` and `package-lock.json`. This checkout uses the version-bump pre-push hook; enable it after cloning with `git config core.hooksPath .githooks`.

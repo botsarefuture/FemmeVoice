@@ -19,6 +19,7 @@ from pymongo import ASCENDING, MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
+from reminder_logic import VALID_REMINDER_TONES, normalize_reminder_days
 
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
@@ -376,10 +377,16 @@ def verify_email():
 
 def reminder_settings_for(user):
     reminder = user.get("reminder") or {}
+    try:
+        days = normalize_reminder_days(reminder.get("days"))
+    except ValueError:
+        days = list(range(7))
     return {
         "enabled": bool(reminder.get("enabled")),
         "time": reminder.get("time") if REMINDER_TIME_RE.fullmatch(str(reminder.get("time", ""))) else "18:00",
         "timezone": reminder.get("timezone") or "UTC",
+        "days": days,
+        "tone": reminder.get("tone") if reminder.get("tone") in VALID_REMINDER_TONES else "gentle",
     }
 
 
@@ -403,17 +410,24 @@ def update_reminder_settings():
     enabled = payload.get("enabled")
     time = str(payload.get("time", "")).strip()
     timezone_name = str(payload.get("timezone", "")).strip()
+    tone = str(payload.get("tone", "gentle")).strip()
     if not isinstance(enabled, bool) or not REMINDER_TIME_RE.fullmatch(time):
         return auth_error("Choose a valid reminder time.")
+    try:
+        days = normalize_reminder_days(payload.get("days"))
+    except ValueError as error:
+        return auth_error(str(error))
+    if tone not in VALID_REMINDER_TONES:
+        return auth_error("Choose a valid reminder style.")
     try:
         ZoneInfo(timezone_name)
     except ZoneInfoNotFoundError:
         return auth_error("Choose a valid time zone.")
     if enabled and not user["email_verified"]:
         return auth_error("Verify an email address before enabling practice reminders.")
-    settings = {"enabled": enabled, "time": time, "timezone": timezone_name, "updated_at": now_iso()}
+    settings = {"enabled": enabled, "time": time, "timezone": timezone_name, "days": days, "tone": tone, "updated_at": now_iso()}
     users_collection.update_one({"_id": ObjectId(user["id"])}, {"$set": {"reminder": settings}})
-    return jsonify({key: settings[key] for key in ("enabled", "time", "timezone")})
+    return jsonify({key: settings[key] for key in ("enabled", "time", "timezone", "days", "tone")})
 
 
 @app.get("/api/privacy/export")

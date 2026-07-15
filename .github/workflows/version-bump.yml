@@ -1,0 +1,24 @@
+name: Version bump
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run check:version
+      - name: Require a version bump for every update
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before || github.event.pull_request.base.sha }}
+          AFTER: ${{ github.sha }}
+        run: |
+          node scripts/require-version-bump.mjs "$BEFORE" "$AFTER"
