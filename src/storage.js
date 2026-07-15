@@ -88,6 +88,8 @@ export function mergeTodayIntoProgress(progress, session, preferences) {
     days,
     bestLowMidi: minDefined(normalized.bestLowMidi, session.lowMidi),
     bestHighMidi: maxDefined(normalized.bestHighMidi, session.highMidi),
+    bestComfortLowMidi: minDefined(normalized.bestComfortLowMidi, session.comfortLowMidi),
+    bestComfortHighMidi: maxDefined(normalized.bestComfortHighMidi, session.comfortHighMidi),
     bestScore: maxDefined(normalized.bestScore, bestAttempt?.score ?? null),
     bestScoreNote: bestAttempt && bestAttempt.score >= (normalized.bestScore ?? 0)
       ? bestAttempt.targetNote
@@ -115,6 +117,8 @@ function defaultProgress() {
     days: [],
     bestLowMidi: null,
     bestHighMidi: null,
+    bestComfortLowMidi: null,
+    bestComfortHighMidi: null,
     bestScore: null,
     bestScoreNote: null,
     highestPassedIndex: 0,
@@ -164,6 +168,8 @@ export function mergeProgressRecords(primary, secondary) {
     days,
     bestLowMidi: minDefined(first.bestLowMidi, second.bestLowMidi),
     bestHighMidi: maxDefined(first.bestHighMidi, second.bestHighMidi),
+    bestComfortLowMidi: minDefined(first.bestComfortLowMidi, second.bestComfortLowMidi),
+    bestComfortHighMidi: maxDefined(first.bestComfortHighMidi, second.bestComfortHighMidi),
     bestScore: maxDefined(first.bestScore, second.bestScore),
     bestScoreNote: bestScoreSource.bestScoreNote,
     highestPassedIndex: Math.max(first.highestPassedIndex ?? 0, second.highestPassedIndex ?? 0),

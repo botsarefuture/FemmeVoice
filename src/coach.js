@@ -58,8 +58,15 @@ export function buildCoachTips({ history, targetFrequency, currentFrequency, dai
 }
 
 export function scoreAttempt({ targetFrequency, samples }) {
-  const voiced = samples.filter((sample) => sample.frequency && sample.clarity > 0.35).slice(-50);
+  const voiced = samples.filter((sample) => sample.frequency && sample.clarity > 0.55);
   if (voiced.length < 8) return { score: 0, label: "Need a longer tone", cents: null };
+
+  let longestRunMs = 0;
+  let runStartedAt = voiced[0].time;
+  for (let index = 1; index < voiced.length; index += 1) {
+    if (voiced[index].time - voiced[index - 1].time > 250) runStartedAt = voiced[index].time;
+    longestRunMs = Math.max(longestRunMs, voiced[index].time - runStartedAt);
+  }
 
   const cents = voiced.map((sample) => centsOff(sample.frequency, targetFrequency));
   const mean = cents.reduce((sum, value) => sum + value, 0) / cents.length;
@@ -72,7 +79,8 @@ export function scoreAttempt({ targetFrequency, samples }) {
   const stableBelowTarget = stable && mean < -55;
 
   let label = "Good data, try one small adjustment";
-  if (accuracy >= 82) label = "Lovely, repeatable match";
+  if (longestRunMs < 1800) label = "Keep the tone going a little longer";
+  else if (accuracy >= 82) label = "Lovely, repeatable match";
   else if (accuracy >= 64) label = "Close enough to build on";
   else if (Math.abs(mean) > 65) label = mean > 0 ? "Let the pitch settle" : "Lift with a brighter vowel";
 
@@ -83,7 +91,8 @@ export function scoreAttempt({ targetFrequency, samples }) {
     spread: Math.round(spread),
     stableAboveTarget,
     stableBelowTarget,
-    matched: accuracy >= 64,
+    matched: accuracy >= 64 && longestRunMs >= 1800,
+    sustainedMs: longestRunMs,
     targetNote: midiToNoteName(frequencyToMidi(targetFrequency)),
   };
 }

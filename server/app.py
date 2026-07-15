@@ -9,6 +9,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from bson import ObjectId
 from flask import Flask, Response, jsonify, redirect, request, send_from_directory, session
@@ -34,6 +35,7 @@ USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,31}$")
 PASSWORD_MIN_LENGTH = 15
 PASSWORD_MAX_LENGTH = 128
 EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+REMINDER_TIME_RE = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
@@ -370,6 +372,48 @@ def verify_email():
     users_collection.update_one({"_id": ObjectId(record["user_id"])}, {"$set": {"email": record["email"], "email_normalized": record["email"], "email_verified_at": now_iso()}})
     email_tokens_collection.delete_one({"_id": record["_id"]})
     return redirect("/?email=verified#account")
+
+
+def reminder_settings_for(user):
+    reminder = user.get("reminder") or {}
+    return {
+        "enabled": bool(reminder.get("enabled")),
+        "time": reminder.get("time") if REMINDER_TIME_RE.fullmatch(str(reminder.get("time", ""))) else "18:00",
+        "timezone": reminder.get("timezone") or "UTC",
+    }
+
+
+@app.get("/api/account/reminder")
+def get_reminder_settings():
+    user = user_from_request()
+    if not user:
+        return auth_error("Sign in to manage practice reminders.", 401)
+    document = users_collection.find_one({"_id": ObjectId(user["id"])}, {"reminder": 1}) or {}
+    return jsonify(reminder_settings_for(document))
+
+
+@app.put("/api/account/reminder")
+def update_reminder_settings():
+    if not csrf_required():
+        return auth_error("Your session expired. Refresh and try again.", 403)
+    user = user_from_request()
+    if not user:
+        return auth_error("Sign in to manage practice reminders.", 401)
+    payload = request.get_json(silent=True) or {}
+    enabled = payload.get("enabled")
+    time = str(payload.get("time", "")).strip()
+    timezone_name = str(payload.get("timezone", "")).strip()
+    if not isinstance(enabled, bool) or not REMINDER_TIME_RE.fullmatch(time):
+        return auth_error("Choose a valid reminder time.")
+    try:
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return auth_error("Choose a valid time zone.")
+    if enabled and not user["email_verified"]:
+        return auth_error("Verify an email address before enabling practice reminders.")
+    settings = {"enabled": enabled, "time": time, "timezone": timezone_name, "updated_at": now_iso()}
+    users_collection.update_one({"_id": ObjectId(user["id"])}, {"$set": {"reminder": settings}})
+    return jsonify({key: settings[key] for key in ("enabled", "time", "timezone")})
 
 
 @app.get("/api/privacy/export")

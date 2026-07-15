@@ -312,7 +312,8 @@ svg {
 .compact-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .compact-options .tier-option { min-height: 58px; padding: 8px; }
 .privacy-link { margin-top: 14px; }
-.range-correction { margin-top: 12px; color: #8f1e3a; }
+.measurement-explainer { display: flex; gap: 8px; align-items: center; max-width: 560px; margin-top: 13px; color: #17665b; font-size: 0.86rem; font-weight: 720; line-height: 1.35; }
+.measurement-explainer svg { width: 17px; height: 17px; flex: none; }
 
 .privacy-page { max-width: 980px; }
 .privacy-policy-heading { display: flex; gap: 14px; align-items: start; margin-bottom: 20px; }

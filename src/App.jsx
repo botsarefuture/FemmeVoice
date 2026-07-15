@@ -37,7 +37,7 @@ import {
   midiToNoteName,
   semitoneSpan,
 } from "./audio";
-import { deleteAccount, downloadPrivateRecording, exportAccountData, listPrivateRecordings, loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, removePrivateRecording as deletePrivateRecording, requestEmailVerification, saveCloudProgress, submitFeedback, uploadPrivateRecording } from "./api";
+import { deleteAccount, downloadPrivateRecording, exportAccountData, listPrivateRecordings, loadCloudProgress, loadMe, loadReminderSettings, loginAccount, logoutAccount, registerAccount, removePrivateRecording as deletePrivateRecording, requestEmailVerification, saveCloudProgress, saveReminderSettings, submitFeedback, uploadPrivateRecording } from "./api";
 import { buildCoachTips, scoreAttempt } from "./coach";
 import {
   dayKey,
@@ -295,6 +295,9 @@ export default function App() {
   const [privacyStatus, setPrivacyStatus] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [reminderSettings, setReminderSettings] = useState({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
+  const [reminderSubmitting, setReminderSubmitting] = useState(false);
+  const [reminderStatus, setReminderStatus] = useState("");
   const [feedbackForm, setFeedbackForm] = useState({ category: "idea", message: "" });
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
@@ -482,6 +485,22 @@ export default function App() {
       cancelled = true;
     };
   }, [deviceId]);
+
+  useEffect(() => {
+    if (!authInfo.authenticated) {
+      setReminderSettings({ enabled: false, time: "18:00", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" });
+      return;
+    }
+    let cancelled = false;
+    loadReminderSettings()
+      .then((settings) => {
+        if (!cancelled) setReminderSettings(settings);
+      })
+      .catch(() => {
+        if (!cancelled) setReminderStatus("Could not load reminder settings.");
+      });
+    return () => { cancelled = true; };
+  }, [authInfo.authenticated]);
 
   useEffect(() => {
     const transfer = new URLSearchParams(window.location.search).get("transfer");
@@ -717,7 +736,7 @@ export default function App() {
 
     updatePrivateRecordingActivity(analysis, sample.time);
 
-    if (analysis.frequency && analysis.clarity > 0.35) {
+    if (analysis.frequency && analysis.clarity > 0.55) {
       const midi = frequencyToMidi(analysis.frequency);
       captureSustainedRangeNote(midi, sample.time);
     } else {
@@ -740,12 +759,12 @@ export default function App() {
   }
 
   function captureSustainedRangeNote(midi, time) {
-    const windowStart = time - 420;
+    const windowStart = time - 1800;
     const window = [...rangeWindowRef.current, { midi, time }].filter((sample) => sample.time >= windowStart);
     rangeWindowRef.current = window;
-    if (window.length < 8 || window[window.length - 1].time - window[0].time < 380) return;
+    if (window.length < 24 || window[window.length - 1].time - window[0].time < 1700) return;
     const notes = window.map((sample) => sample.midi);
-    if (Math.max(...notes) - Math.min(...notes) > 0.8) return;
+    if (Math.max(...notes) - Math.min(...notes) > 0.45) return;
     const steadyMidi = notes.slice().sort((a, b) => a - b)[Math.floor(notes.length / 2)];
     setDailySession((session) => ({
       ...session,
@@ -869,23 +888,6 @@ export default function App() {
     rangeWindowRef.current = [];
     setLastScore(null);
     setAttemptProgress(0);
-  }
-
-  function removeSavedHighOutlier() {
-    const outlier = progress.bestHighMidi;
-    if (outlier === null) return;
-    if (!window.confirm(`Remove ${midiToNoteName(outlier)} as a false high-note outlier? This keeps your other progress.`)) return;
-    const remainingHighs = [
-      ...progress.days.map((day) => day.highMidi),
-      dailySession.highMidi,
-    ].filter((midi) => midi !== null && midi < outlier);
-    const replacement = remainingHighs.length ? Math.max(...remainingHighs) : null;
-    setDailySession((session) => session.highMidi === outlier ? { ...session, highMidi: null } : session);
-    setProgress((currentProgress) => ({
-      ...currentProgress,
-      bestHighMidi: replacement,
-      days: currentProgress.days.map((day) => day.highMidi === outlier ? { ...day, highMidi: null } : day),
-    }));
   }
 
   function acknowledgeBreak(id) {
@@ -1031,6 +1033,22 @@ export default function App() {
       setPrivacyStatus(error.message);
     } finally {
       setEmailSubmitting(false);
+    }
+  }
+
+  async function updateReminderSettings(event) {
+    event.preventDefault();
+    if (reminderSubmitting) return;
+    try {
+      setReminderSubmitting(true);
+      setReminderStatus("");
+      const settings = await saveReminderSettings(reminderSettings);
+      setReminderSettings(settings);
+      setReminderStatus(settings.enabled ? `A gentle daily reminder will arrive at ${settings.time}.` : "Daily reminder emails are off.");
+    } catch (error) {
+      setReminderStatus(error.message);
+    } finally {
+      setReminderSubmitting(false);
     }
   }
 
@@ -1600,10 +1618,10 @@ export default function App() {
           <p className="eyebrow">Progress memory</p>
           <h2>{gentleDisplay ? `Your last saved practice step was ${MODE_LABELS[progress.lastMode]}.` : `Last time you reached ${midiToNoteName(rememberedTargetMidi)} in ${MODE_LABELS[progress.lastMode]}.`}</h2>
           <p>
-            Best saved range: {formatRange(progress.bestLowMidi, progress.bestHighMidi)}.
+            Reliable match area: {formatReliableRange(progressStats.reliableLowMidi, progressStats.reliableHighMidi)}.
             {progress.bestScore !== null ? ` Best scored repeat: ${progress.bestScore}/100 on ${progress.bestScoreNote}.` : "Score a repeat to begin your history."}
           </p>
-          {progress.bestHighMidi !== null && <button className="account-link range-correction" onClick={removeSavedHighOutlier}>Remove {midiToNoteName(progress.bestHighMidi)} as a false high-note outlier</button>}
+          <div className="measurement-explainer"><CheckCircle2 /><span>Verified notes need a clear, steady hold. A quick pitch blip cannot change this record.</span></div>
           <span className={syncStatus === "synced" ? "sync-pill synced" : "sync-pill"}>
             {syncStatus === "synced" ? authInfo.authenticated ? "Account progress synced" : "Anonymous cloud synced" : syncStatus === "syncing" ? "Syncing progress" : "Saved on this device"}
           </span>
@@ -1611,15 +1629,15 @@ export default function App() {
         <div className="progress-stats">
           <ProgressStat icon={<Trophy />} label="Practice days" value={progress.totalPracticeDays} detail={`${progressStats.streak} day streak`} />
           <ProgressStat icon={<Target />} label="Scored repeats" value={progress.totalAttempts} detail={`${progressStats.averageScore}% recent avg`} />
-          <ProgressStat icon={<Gauge />} label="All-time range" value={`${progressStats.bestSpan} st`} detail={formatRange(progress.bestLowMidi, progress.bestHighMidi)} />
+          <ProgressStat icon={<Gauge />} label="Reliable match area" value={formatReliableRange(progressStats.reliableLowMidi, progressStats.reliableHighMidi)} detail={progressStats.bestSpan ? `${progressStats.bestSpan} semitones across verified checks` : "Complete a sustained match to map this"} />
         </div>
         <div className="history-bars" aria-label="Recent practice history">
           {progressStats.daysForChart.map((day) => <div className="history-day" key={day.date}><span style={{ height: `${day.height}%` }} /><small>{day.label}</small></div>)}
         </div>
       </section>
       <section className="range-history" aria-label="Dated voice range history">
-        <div><p className="eyebrow">Your range over time</p><h2>A dated record of what your voice reached.</h2><p>Only steady sounds held for at least a moment are included. It is a record, not a target.</p></div>
-        {progress.days.length ? <ol>{progress.days.map((day) => <li key={day.date}><time dateTime={day.date}>{formatHistoryDate(day.date)}</time><span>{day.highMidi === null ? "No stable high note saved" : `Highest stable pitch: ${midiToNoteName(day.highMidi)}`}</span><small>{day.lowMidi === null ? "" : `${midiToNoteName(day.lowMidi)} to ${midiToNoteName(day.highMidi)}${day.comfort ? ` · Felt ${day.comfort}` : ""}`}</small></li>)}</ol> : <p className="muted">Your dated range history begins after your first steady practice sound.</p>}
+        <div><p className="eyebrow">Your range over time</p><h2>A dated record of verified practice matches.</h2><p>A note is saved here only after a clear, sustained match check. It is a learning record, not a target.</p></div>
+        {progress.days.length ? <ol>{progress.days.map((day) => <li key={day.date}><time dateTime={day.date}>{formatHistoryDate(day.date)}</time><span>{day.comfortHighMidi === null ? "No verified match saved" : `Highest verified match: ${midiToNoteName(day.comfortHighMidi)}`}</span><small>{day.comfortLowMidi === null ? "" : `${formatReliableRange(day.comfortLowMidi, day.comfortHighMidi)}${day.comfort ? ` · Felt ${day.comfort}` : ""}`}</small></li>)}</ol> : <p className="muted">Your dated match history begins after your first sustained practice match.</p>}
       </section>
       <section className="private-vault progress-vault" aria-label="Private recordings">
         <div>
@@ -1726,6 +1744,20 @@ export default function App() {
         </form>
       </section>}
 
+      {authInfo.authenticated && <section className="data-rights" aria-label="Practice reminder settings">
+        <div>
+          <p className="eyebrow">Practice reminders</p>
+          <h3>Make practice easier to remember</h3>
+          <p>{authInfo.user?.email_verified ? "Choose one gentle daily email in your local time. It is off unless you turn it on, and you can stop it here at any time." : "Verify a recovery email first. FemmeVoice will never send practice reminders until you explicitly turn them on."}</p>
+        </div>
+        {authInfo.user?.email_verified ? <form className="email-form reminder-form" onSubmit={updateReminderSettings}>
+          <label className="checkbox-row"><input type="checkbox" checked={reminderSettings.enabled} onChange={(event) => setReminderSettings((current) => ({ ...current, enabled: event.target.checked }))} /> Send me a daily practice reminder</label>
+          <label>Time<input type="time" value={reminderSettings.time} onChange={(event) => setReminderSettings((current) => ({ ...current, time: event.target.value }))} disabled={!reminderSettings.enabled || reminderSubmitting} /></label>
+          <button className="primary-action" disabled={reminderSubmitting}>{reminderSubmitting ? "Saving..." : "Save reminder"}</button>
+        </form> : null}
+        {reminderStatus && <p className="privacy-status">{reminderStatus}</p>}
+      </section>}
+
       {authInfo.authenticated && <section className="data-rights private-vault-settings" aria-label="Private recording vault">
         <div>
           <p className="eyebrow">Private recording vault</p>
@@ -1803,7 +1835,7 @@ export default function App() {
         <div className="privacy-policy-heading"><ShieldCheck /><div><p className="eyebrow">Privacy policy</p><h2>Your voice stays yours.</h2><p>Effective 15 July 2026. FemmeVoice is a practice companion, not a diagnostic or therapy service.</p></div></div>
         <div className="privacy-policy-text">
           <section><h3>Who is responsible</h3><p>Emilia Vuorenmaa is the controller for FemmeVoice. Contact: <a href="mailto:emilia@luova.club">emilia@luova.club</a>.</p></section>
-          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to.</p></section>
+          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to. We send practice reminder email only when you have explicitly enabled it in Settings.</p></section>
           <section><h3>Microphone and recordings</h3><p>Pitch analysis happens in your browser. FemmeVoice does not record or upload audio unless you explicitly turn on automatic recording or start a recording yourself. When the private vault is unlocked and automatic recording is enabled, FemmeVoice records voiced parts of practice and skips quiet gaps. Before an audio note is uploaded, it is encrypted in your browser. We store the encrypted audio plus the label, date, duration, file type, size, and technical encryption information needed to retrieve it. We cannot play the audio.</p></section>
           <section><h3>Your control</h3><p>You can turn automatic recording off in Settings, discard a take, delete individual recordings, export account and progress data, or permanently delete your account. Account data stays until deletion; security records are kept only as long as needed for security and operations.</p></section>
           <section><h3>Sharing and security</h3><p>Only infrastructure providers needed to host FemmeVoice and its database process data for us. We do not sell data, use advertising, or profile people for marketing. We use HTTPS, secure session cookies, CSRF protection, password hashing, access controls, and data minimisation. No security measure is absolute.</p></section>
@@ -1865,7 +1897,10 @@ function summarizeSession(history, current, dailySession) {
 }
 
 function summarizeProgress(progress) {
-  const bestSpan = semitoneSpan(progress.bestLowMidi, progress.bestHighMidi);
+  const reliableDays = progress.days.filter((day) => Number.isFinite(day.comfortLowMidi) && Number.isFinite(day.comfortHighMidi));
+  const reliableLowMidi = reliableDays.length ? Math.min(...reliableDays.map((day) => day.comfortLowMidi)) : null;
+  const reliableHighMidi = reliableDays.length ? Math.max(...reliableDays.map((day) => day.comfortHighMidi)) : null;
+  const bestSpan = semitoneSpan(reliableLowMidi, reliableHighMidi);
   const scoredDays = progress.days.filter((day) => day.bestScore !== null);
   const recentScores = scoredDays.slice(0, 7).map((day) => day.bestScore);
   const averageScore = recentScores.length
@@ -1874,6 +1909,8 @@ function summarizeProgress(progress) {
   const daysForChart = buildDayChart(progress.days);
   return {
     bestSpan,
+    reliableLowMidi,
+    reliableHighMidi,
     streak: calculateStreak(progress.days),
     averageScore,
     daysForChart,
@@ -1883,8 +1920,8 @@ function summarizeProgress(progress) {
 function buildDailyComparison(days, todaySession) {
   const today = {
     date: dayKey(),
-    lowMidi: todaySession.lowMidi,
-    highMidi: todaySession.highMidi,
+    lowMidi: todaySession.comfortLowMidi,
+    highMidi: todaySession.comfortHighMidi,
   };
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
@@ -1897,9 +1934,9 @@ function buildDailyComparison(days, todaySession) {
   const range = semitoneSpan(today.lowMidi, today.highMidi);
   const base = {
     highNote: today.highMidi === null ? "--" : midiToNoteName(today.highMidi),
-    highDetail: today.highMidi === null ? "Warm up to map it" : "Held steadily for 0.4 sec",
-    range: range ? `${range} st` : "--",
-    rangeDetail: range ? "Comfort range mapped" : "Keep it gentle",
+    highDetail: today.highMidi === null ? "Complete a sustained match to map it" : "Verified by a sustained match",
+    range: formatReliableRange(today.lowMidi, today.highMidi),
+    rangeDetail: range ? "Successful match area" : today.highMidi === null ? "Keep it gentle" : "One verified note so far",
   };
 
   if (today.highMidi === null) {
@@ -1941,6 +1978,12 @@ function buildDailyComparison(days, todaySession) {
 function formatSessionTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function formatReliableRange(lowMidi, highMidi) {
+  if (!Number.isFinite(lowMidi) || !Number.isFinite(highMidi)) return "--";
+  if (lowMidi === highMidi) return midiToNoteName(highMidi);
+  return formatRange(lowMidi, highMidi);
 }
 
 function formatStorage(bytes) {

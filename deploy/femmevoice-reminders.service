@@ -1,0 +1,12 @@
+[Unit]
+Description=Send FemmeVoice opt-in practice reminders
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/voice_luova_club/server
+EnvironmentFile=/etc/voice_luova_club.env
+ExecStart=/usr/bin/python3 /var/www/voice_luova_club/server/send_reminders.py

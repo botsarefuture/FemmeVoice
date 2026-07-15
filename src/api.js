@@ -89,6 +89,20 @@ export async function requestEmailVerification(email) {
   return secureRequest("/api/account/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
 }
 
+export async function loadReminderSettings() {
+  const response = await fetch("/api/account/reminder", { headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error("Could not load reminder settings.");
+  return response.json();
+}
+
+export async function saveReminderSettings(settings) {
+  return secureRequest("/api/account/reminder", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+}
+
 export async function submitFeedback(payload) {
   return secureRequest("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 }
