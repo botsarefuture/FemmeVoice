@@ -1347,15 +1347,36 @@ export default function App() {
         </form>
       </section>}
 
-      <section className="account-settings" aria-label="Practice preferences">
-        <p className="eyebrow">Practice preferences</p>
-        <h3>Range view</h3>
-        <label className="setting-toggle">
-          <input type="checkbox" checked={showExtendedRange} onChange={(event) => setShowExtendedRange(event.target.checked)} />
-          <span aria-hidden="true" />
-          <strong>Show extended upper range to F5</strong>
-        </label>
-        <p>Saved with your progress. Turn it on when you want to explore higher notes, not because you have to reach them.</p>
+      <section className="account-settings-grid" aria-label="All account settings">
+        <article>
+          <p className="eyebrow">Profile</p>
+          <h3>FemmeVoice identity</h3>
+          <dl><div><dt>Username</dt><dd>{authInfo.user?.username || "Local practice"}</dd></div><div><dt>Progress</dt><dd>{syncStatus === "synced" ? "Synced" : "On this device"}</dd></div></dl>
+        </article>
+        <article>
+          <p className="eyebrow">Training default</p>
+          <h3>Session pace</h3>
+          <div className="tier-options compact-options">
+            {Object.entries(PRACTICE_TIERS).map(([id, tier]) => <button className={practiceTier === id ? "tier-option selected" : "tier-option"} key={id} onClick={() => setPracticeTier(id)} aria-pressed={practiceTier === id}><strong>{tier.label}</strong><span>{tier.minutes} min</span></button>)}
+          </div>
+          <p>{activeTier.description}</p>
+        </article>
+        <article>
+          <p className="eyebrow">Range & calibration</p>
+          <h3>Keep it personal</h3>
+          <label className="setting-toggle">
+            <input type="checkbox" checked={showExtendedRange} onChange={(event) => setShowExtendedRange(event.target.checked)} />
+            <span aria-hidden="true" />
+            <strong>Show extended upper range to F5</strong>
+          </label>
+          <button className="account-link" onClick={recalibrateComfortAnchor}>Recalibrate from my easy hum</button>
+          <p>The next steady hum becomes your starting anchor. No preset pitch is required.</p>
+        </article>
+        <article>
+          <p className="eyebrow">Privacy summary</p>
+          <h3>What FemmeVoice remembers</h3>
+          <dl><div><dt>Audio</dt><dd>Never uploaded</dd></div><div><dt>Stored</dt><dd>Account, progress, preferences</dd></div><div><dt>Retention</dt><dd>Until you delete it</dd></div></dl>
+        </article>
       </section>
 
       <section className="privacy-policy" id="privacy">
