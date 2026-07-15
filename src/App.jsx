@@ -293,7 +293,7 @@ export default function App() {
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
   const [gentleDisplay, setGentleDisplay] = useState(() => loadProgress().gentleDisplay ?? false);
-  const [autoRecord, setAutoRecord] = useState(() => loadProgress().autoRecord ?? true);
+  const [autoRecord, setAutoRecord] = useState(() => loadProgress().autoRecordConsent ?? false);
   const [practiceStyle, setPracticeStyle] = useState(() => loadProgress().practiceStyle ?? "guided");
   const [savedRecordings, setSavedRecordings] = useState([]);
   const [vaultRecording, setVaultRecording] = useState(false);
@@ -400,7 +400,7 @@ export default function App() {
       comfortAnchorMidi,
       showExtendedRange,
       gentleDisplay,
-      autoRecord,
+      autoRecordConsent: autoRecord,
       practiceStyle,
     }));
   }, [dailySession]);
@@ -414,7 +414,7 @@ export default function App() {
       comfortAnchorMidi,
       showExtendedRange,
       gentleDisplay,
-      autoRecord,
+      autoRecordConsent: autoRecord,
       practiceStyle,
     }));
   }, [targetIndex, activeStep, exerciseMode, practiceTier, comfortAnchorMidi, showExtendedRange, gentleDisplay, autoRecord, practiceStyle]);
@@ -450,7 +450,7 @@ export default function App() {
           setComfortAnchorMidi(merged.comfortAnchorMidi ?? null);
           setShowExtendedRange(merged.showExtendedRange ?? false);
           setGentleDisplay(merged.gentleDisplay ?? false);
-          setAutoRecord(merged.autoRecord ?? true);
+          setAutoRecord(merged.autoRecordConsent ?? false);
           setPracticeStyle(merged.practiceStyle ?? "guided");
         }
         setSyncStatus("synced");
@@ -1702,7 +1702,7 @@ export default function App() {
           <label className="setting-toggle">
             <input type="checkbox" checked={autoRecord} onChange={(event) => setAutoRecord(event.target.checked)} />
             <span aria-hidden="true" />
-            <strong>Record voiced practice automatically when my vault is unlocked</strong>
+            <strong>Automatically record voiced practice when my vault is unlocked</strong>
           </label>
           <button className="account-link" onClick={recalibrateComfortAnchor}>Recalibrate from my easy hum</button>
           <p>The next steady hum becomes your starting anchor. No preset pitch is required.</p>
@@ -1722,7 +1722,7 @@ export default function App() {
         <div className="privacy-policy-text">
           <section><h3>Who is responsible</h3><p>Emilia Vuorenmaa is the controller for FemmeVoice. Contact: <a href="mailto:emilia@luova.club">emilia@luova.club</a>.</p></section>
           <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to.</p></section>
-          <section><h3>Microphone and recordings</h3><p>Pitch analysis happens in your browser. When the private vault is unlocked and automatic recording is enabled, FemmeVoice records voiced parts of practice and skips quiet gaps. Before an audio note is uploaded, it is encrypted in your browser. We store the encrypted audio plus the label, date, duration, file type, size, and technical encryption information needed to retrieve it. We cannot play the audio.</p></section>
+          <section><h3>Microphone and recordings</h3><p>Pitch analysis happens in your browser. FemmeVoice does not record or upload audio unless you explicitly turn on automatic recording or start a recording yourself. When the private vault is unlocked and automatic recording is enabled, FemmeVoice records voiced parts of practice and skips quiet gaps. Before an audio note is uploaded, it is encrypted in your browser. We store the encrypted audio plus the label, date, duration, file type, size, and technical encryption information needed to retrieve it. We cannot play the audio.</p></section>
           <section><h3>Your control</h3><p>You can turn automatic recording off in Settings, discard a take, delete individual recordings, export account and progress data, or permanently delete your account. Account data stays until deletion; security records are kept only as long as needed for security and operations.</p></section>
           <section><h3>Sharing and security</h3><p>Only infrastructure providers needed to host FemmeVoice and its database process data for us. We do not sell data, use advertising, or profile people for marketing. We use HTTPS, secure session cookies, CSRF protection, password hashing, access controls, and data minimisation. No security measure is absolute.</p></section>
           <section><h3>Your rights</h3><p>You can ask for access, correction, restriction, portability, or object to processing through the contact above. You may also lodge a complaint with your local data-protection authority; in Finland, this is the Office of the Data Protection Ombudsman.</p></section>
