@@ -31,7 +31,7 @@ import {
   midiToNoteName,
   semitoneSpan,
 } from "./audio";
-import { loadCloudProgress, loadMe, saveCloudProgress } from "./api";
+import { loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, saveCloudProgress } from "./api";
 import { buildCoachTips, scoreAttempt } from "./coach";
 import {
   dayKey,
@@ -194,6 +194,10 @@ export default function App() {
   const [attemptProgress, setAttemptProgress] = useState(0);
   const [syncStatus, setSyncStatus] = useState("local");
   const [authInfo, setAuthInfo] = useState({ authenticated: false, user: null });
+  const [accountMode, setAccountMode] = useState(null);
+  const [accountForm, setAccountForm] = useState({ username: "", password: "", confirmation: "" });
+  const [accountError, setAccountError] = useState("");
+  const [accountSubmitting, setAccountSubmitting] = useState(false);
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
 
@@ -318,6 +322,17 @@ export default function App() {
       cancelled = true;
     };
   }, [deviceId]);
+
+  useEffect(() => {
+    const transfer = new URLSearchParams(window.location.search).get("transfer");
+    if (!transfer) return;
+    window.history.replaceState({}, "", window.location.pathname);
+    if (transfer === "ready") setAccountMode("register");
+    if (transfer === "failed") {
+      setAccountMode("register");
+      setAccountError("We could not verify that existing account. Please try the transfer again.");
+    }
+  }, []);
 
   useEffect(() => {
     drawVisualizer();
@@ -487,6 +502,32 @@ export default function App() {
     setLastScore(null);
   }
 
+  async function submitAccount(event) {
+    event.preventDefault();
+    setAccountError("");
+    setAccountSubmitting(true);
+    try {
+      const result = accountMode === "register"
+        ? await registerAccount(accountForm)
+        : await loginAccount(accountForm);
+      setAuthInfo({ authenticated: true, user: result.user });
+      setAccountMode(null);
+      setAccountForm({ username: "", password: "", confirmation: "" });
+    } catch (error) {
+      setAccountError(error.message);
+    } finally {
+      setAccountSubmitting(false);
+    }
+  }
+
+  async function signOut() {
+    try {
+      await logoutAccount();
+    } finally {
+      setAuthInfo({ authenticated: false, user: null });
+    }
+  }
+
   function drawVisualizer() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -574,7 +615,7 @@ export default function App() {
     <main className="app-shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">Lilt Voice</p>
+          <p className="eyebrow">FemmeVoice</p>
           <h1>Find a voice that feels easy, expressive, and yours.</h1>
           <p className="hero-copy">
             Real-time pitch tracking and guided listening drills for weight, pitch comfort, brightness, and speech
@@ -583,11 +624,11 @@ export default function App() {
         </div>
         <div className="hero-actions">
           {authInfo.authenticated ? (
-            <a className="auth-action" href="/auth/logout">
+            <button className="auth-action" onClick={signOut}>
               {authInfo.user?.display_name || authInfo.user?.username || "Signed in"}
-            </a>
+            </button>
           ) : (
-            <a className="auth-action" href="/auth/login">Sign in to save progress</a>
+            <button className="auth-action" onClick={() => setAccountMode("login")}>Sign in to save progress</button>
           )}
           <button className="primary-action" onClick={listening ? stopListening : startListening}>
             {listening ? <Square /> : <Mic />}
@@ -915,6 +956,7 @@ export default function App() {
           <div className="account-settings">
             <p className="eyebrow">Your settings</p>
             <h3>Range view</h3>
+            {!authInfo.authenticated && <button className="account-link" onClick={() => setAccountMode("register")}>Create an account to sync progress</button>}
             <label className="setting-toggle">
               <input
                 type="checkbox"
@@ -996,6 +1038,37 @@ export default function App() {
           ))}
         </div>
       </section>
+
+      <section className="privacy-policy" id="privacy">
+        <p className="eyebrow">Privacy and safety</p>
+        <h2>Your voice stays yours.</h2>
+        <div className="privacy-grid">
+          <article><h3>Microphone</h3><p>Pitch analysis runs in your browser. FemmeVoice does not upload or store raw microphone audio.</p></article>
+          <article><h3>Account</h3><p>Accounts use a username and a slow, salted passphrase hash. Your passphrase is never stored or visible to us.</p></article>
+          <article><h3>Progress</h3><p>When sync is enabled, we store practice progress, preferences, and a device identifier so the app can remember your training.</p></article>
+          <article><h3>Boundaries</h3><p>No advertising profile, biometric voiceprint, or sale of personal data. This is not medical diagnosis or speech therapy.</p></article>
+        </div>
+        <p className="privacy-note">Use a unique passphrase of at least 15 characters. Stop practice if your voice hurts, feels scratchy, or stays fatigued. Password recovery is intentionally unavailable until verified recovery can be implemented safely.</p>
+      </section>
+
+      {accountMode && (
+        <div className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title">
+          <form onSubmit={submitAccount} className="account-form">
+            <button type="button" className="modal-close" onClick={() => setAccountMode(null)} aria-label="Close account dialog">x</button>
+            <p className="eyebrow">FemmeVoice account</p>
+            <h2 id="account-title">{accountMode === "register" ? "Save your progress privately" : "Welcome back"}</h2>
+            <p>{accountMode === "register" ? "Choose a username and a long, unique passphrase. No email address is collected." : "Sign in with your FemmeVoice username and passphrase."}</p>
+            <label>Username<input autoComplete="username" value={accountForm.username} onChange={(event) => setAccountForm((form) => ({ ...form, username: event.target.value }))} required /></label>
+            <label>Passphrase<input type="password" autoComplete={accountMode === "register" ? "new-password" : "current-password"} value={accountForm.password} onChange={(event) => setAccountForm((form) => ({ ...form, password: event.target.value }))} required /></label>
+            {accountMode === "register" && <label>Confirm passphrase<input type="password" autoComplete="new-password" value={accountForm.confirmation} onChange={(event) => setAccountForm((form) => ({ ...form, confirmation: event.target.value }))} required /></label>}
+            {accountError && <p className="account-error">{accountError}</p>}
+            <button className="primary-action" disabled={accountSubmitting}>{accountSubmitting ? "Working..." : accountMode === "register" ? "Create private account" : "Sign in"}</button>
+            <button type="button" className="account-switch" onClick={() => { setAccountMode(accountMode === "register" ? "login" : "register"); setAccountError(""); }}>{accountMode === "register" ? "Already have an account? Sign in" : "New here? Create an account"}</button>
+            {accountMode === "register" && <a className="migration-link" href="/api/auth/migration">Transfer an existing training account before 1 Aug 2026</a>}
+            <small>By continuing, you acknowledge the privacy notes on this page.</small>
+          </form>
+        </div>
+      )}
     </main>
   );
 }

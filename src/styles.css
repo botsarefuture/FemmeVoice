@@ -1338,6 +1338,90 @@ canvas {
   margin: 0;
 }
 
+.privacy-policy {
+  margin-top: 22px;
+  border-top: 4px solid #c65278;
+  padding: 22px 0;
+}
+
+.privacy-policy h2,
+.privacy-policy p {
+  margin: 0;
+}
+
+.privacy-policy h2 {
+  font-size: clamp(1.45rem, 3vw, 2.3rem);
+  line-height: 1.08;
+}
+
+.privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0 10px;
+}
+
+.privacy-grid article {
+  border-radius: 8px;
+  padding: 13px;
+  background: rgba(35, 38, 34, 0.055);
+}
+
+.privacy-grid h3,
+.privacy-grid p { margin: 0; }
+.privacy-grid h3 { font-size: 1rem; }
+.privacy-grid p, .privacy-note { color: #55615b; font-size: 0.9rem; line-height: 1.42; }
+
+.account-link,
+.account-switch,
+.migration-link {
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  color: #0c695f;
+  background: transparent;
+  font-weight: 760;
+  text-decoration: underline;
+}
+
+.account-link { margin-top: 10px; }
+
+.account-modal {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(20, 25, 23, 0.62);
+}
+
+.account-form {
+  width: min(100%, 460px);
+  position: relative;
+  display: grid;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 24px;
+  color: #232622;
+  background: #fffaf0;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.3);
+}
+
+.account-form h2,
+.account-form p,
+.account-form small { margin: 0; }
+.account-form > p:not(.eyebrow) { color: #55615b; }
+.account-form label { display: grid; gap: 6px; font-weight: 760; }
+.account-form input { min-height: 44px; border: 1px solid rgba(35,38,34,0.18); border-radius: 8px; padding: 0 11px; background: #fffdf7; }
+.account-form small { color: #68736d; }
+.account-error { border-left: 4px solid #c65278; padding: 8px 10px; color: #701f1f; background: #ffe0e0; }
+.modal-close { position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 8px; color: #232622; background: rgba(35,38,34,0.08); font-size: 1.2rem; }
+
+@media (max-width: 980px) {
+  .privacy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .resource-grid h3 {
   display: flex;
   gap: 6px;
@@ -1404,7 +1488,8 @@ canvas {
   .tier-options,
   .practice-principles,
   .library-path,
-  .resource-grid {
+  .resource-grid,
+  .privacy-grid {
     grid-template-columns: 1fr;
   }
 
