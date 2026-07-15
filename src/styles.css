@@ -321,6 +321,13 @@ svg {
 .privacy-policy-heading > div > p:last-child { margin-top: 8px; color: #525a54; }
 .privacy-page .privacy-grid article { min-height: 144px; }
 .privacy-page .privacy-grid a { color: #17665b; font-weight: 720; }
+.privacy-policy-text { max-width: 780px; }
+.privacy-policy-text section { padding: 18px 0; border-top: 1px solid rgba(35, 38, 34, 0.14); }
+.privacy-policy-text section:last-child { border-bottom: 1px solid rgba(35, 38, 34, 0.14); }
+.privacy-policy-text h3, .privacy-policy-text p { margin: 0; }
+.privacy-policy-text h3 { font-size: 1.05rem; }
+.privacy-policy-text p { margin-top: 7px; color: #525a54; line-height: 1.55; }
+.privacy-policy-text a { color: #17665b; font-weight: 720; }
 
 .feedback-page { max-width: 760px; }
 .feedback-note { display: flex; gap: 14px; align-items: start; margin-bottom: 18px; }
@@ -1186,6 +1193,8 @@ svg {
 .saved-recordings strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .saved-recordings small { margin: 0; color: #68736d; font-size: 0.8rem; font-weight: 600; }
 .saved-recordings button:not(.icon-action) { min-height: 36px; border-radius: 8px; padding: 0 11px; color: #173d37; background: rgba(33, 142, 126, 0.13); font-weight: 750; }
+.progress-vault { margin-top: 14px; }
+.vault-empty { grid-column: 1 / -1; margin: 0; color: #68736d; }
 
 canvas {
   display: block;
