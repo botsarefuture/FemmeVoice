@@ -285,6 +285,8 @@ svg {
 .data-rights p { margin: 0; }
 .data-rights > div:last-of-type { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
 .data-rights p:not(.eyebrow) { margin-top: 6px; color: #525a54; }
+.email-form { display: flex; flex-wrap: wrap; gap: 8px; justify-content: end; }
+.email-form input { min-height: 44px; min-width: 220px; border: 1px solid rgba(35, 38, 34, 0.2); border-radius: 8px; padding: 0 11px; background: #fffdf8; }
 .danger-action { min-height: 44px; border-radius: 8px; padding: 0 14px; color: #8f1e3a; background: rgba(198, 82, 120, 0.14); font-weight: 760; }
 .privacy-status { grid-column: 1 / -1; color: #17665b !important; font-weight: 700; }
 

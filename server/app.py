@@ -1,9 +1,12 @@
 import os
 import re
 import secrets
+import hashlib
+import smtplib
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
 from pathlib import Path
 
 from bson import ObjectId
@@ -27,6 +30,12 @@ DEVICE_RE = re.compile(r"^[A-Za-z0-9_-]{16,80}$")
 USERNAME_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{2,31}$")
 PASSWORD_MIN_LENGTH = 15
 PASSWORD_MAX_LENGTH = 128
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+MAIL_FROM = os.environ.get("MAIL_FROM", SMTP_USERNAME)
 LOGIN_WINDOW_SECONDS = 15 * 60
 LOGIN_MAX_ATTEMPTS = 8
 login_attempts = {}
@@ -47,9 +56,12 @@ legacy_db = client[LEGACY_MONGO_DB]
 progress_collection = db["progress"]
 legacy_progress_collection = legacy_db["progress"]
 users_collection = db["users"]
+email_tokens_collection = db["email_tokens"]
 progress_collection.create_index([("device_id", ASCENDING)])
 progress_collection.create_index([("storage_key", ASCENDING)], unique=True)
 users_collection.create_index([("username_normalized", ASCENDING)], unique=True)
+users_collection.create_index([("email_normalized", ASCENDING)], unique=True, sparse=True)
+email_tokens_collection.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)
 
 
 @app.after_request
@@ -94,6 +106,37 @@ def auth_error(message, status=400):
     return jsonify({"error": message}), status
 
 
+def email_token_hash(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def send_email(recipient, subject, body):
+    if not all([SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD, MAIL_FROM]):
+        raise RuntimeError("Email delivery is not configured.")
+    message = EmailMessage()
+    message["From"] = MAIL_FROM
+    message["To"] = recipient
+    message["Subject"] = subject
+    message.set_content(body)
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+        smtp.starttls()
+        smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
+        smtp.send_message(message)
+
+
+def issue_email_token(kind, user, email):
+    token = secrets.token_urlsafe(32)
+    email_tokens_collection.delete_many({"kind": kind, "user_id": user["id"]})
+    email_tokens_collection.insert_one({
+        "kind": kind,
+        "user_id": user["id"],
+        "email": email,
+        "token_hash": email_token_hash(token),
+        "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
+    })
+    return token
+
+
 def migration_open():
     return bool(LEGACY_AUTH_APP_ID) and datetime.now(timezone.utc) <= MIGRATION_DEADLINE
 
@@ -128,6 +171,8 @@ def user_from_request():
         "id": str(user["_id"]),
         "username": user["username"],
         "display_name": user.get("display_name") or user["username"],
+        "email": user.get("email"),
+        "email_verified": bool(user.get("email_verified_at")),
     }
 
 
@@ -285,6 +330,37 @@ def logout():
 def me():
     user = user_from_request()
     return jsonify({"authenticated": bool(user), "user": user})
+
+
+@app.post("/api/account/email")
+def request_email_verification():
+    if not csrf_required():
+        return auth_error("Your session expired. Refresh and try again.", 403)
+    user = user_from_request()
+    if not user:
+        return auth_error("Sign in to add an email address.", 401)
+    email = str((request.get_json(silent=True) or {}).get("email", "")).strip().lower()
+    if not EMAIL_RE.fullmatch(email):
+        return auth_error("Enter a valid email address.")
+    if users_collection.find_one({"email_normalized": email, "_id": {"$ne": ObjectId(user["id"])}}):
+        return auth_error("That email address is already in use.", 409)
+    token = issue_email_token("verify-email", user, email)
+    try:
+        send_email(email, "Verify your FemmeVoice email", f"Verify your email address:\n\n{PUBLIC_BASE_URL}/api/account/verify-email?token={token}\n\nThis link expires in one hour.")
+    except Exception:
+        return auth_error("We could not send a verification email. Please try again later.", 503)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/account/verify-email")
+def verify_email():
+    token = request.args.get("token", "")
+    record = email_tokens_collection.find_one({"kind": "verify-email", "token_hash": email_token_hash(token)})
+    if not record:
+        return redirect("/#account?email=invalid")
+    users_collection.update_one({"_id": ObjectId(record["user_id"])}, {"$set": {"email": record["email"], "email_normalized": record["email"], "email_verified_at": now_iso()}})
+    email_tokens_collection.delete_one({"_id": record["_id"]})
+    return redirect("/#account?email=verified")
 
 
 @app.get("/api/privacy/export")

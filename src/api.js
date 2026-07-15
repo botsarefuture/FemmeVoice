@@ -84,3 +84,7 @@ export async function deleteAccount() {
   csrfToken = null;
   return result;
 }
+
+export async function requestEmailVerification(email) {
+  return secureRequest("/api/account/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+}

@@ -33,7 +33,7 @@ import {
   midiToNoteName,
   semitoneSpan,
 } from "./audio";
-import { deleteAccount, exportAccountData, loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, saveCloudProgress } from "./api";
+import { deleteAccount, exportAccountData, loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, requestEmailVerification, saveCloudProgress } from "./api";
 import { buildCoachTips, scoreAttempt } from "./coach";
 import {
   dayKey,
@@ -277,6 +277,7 @@ export default function App() {
   const [accountError, setAccountError] = useState("");
   const [accountSubmitting, setAccountSubmitting] = useState(false);
   const [privacyStatus, setPrivacyStatus] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
 
@@ -710,6 +711,17 @@ export default function App() {
       await deleteAccount();
       setAuthInfo({ authenticated: false, user: null });
       setPrivacyStatus("Your FemmeVoice account and synced data were deleted.");
+    } catch (error) {
+      setPrivacyStatus(error.message);
+    }
+  }
+
+  async function addAccountEmail(event) {
+    event.preventDefault();
+    try {
+      setPrivacyStatus("");
+      await requestEmailVerification(emailAddress);
+      setPrivacyStatus("Check your inbox to verify this email address. The link expires in one hour.");
     } catch (error) {
       setPrivacyStatus(error.message);
     }
@@ -1308,6 +1320,18 @@ export default function App() {
           <button className="danger-action" onClick={erasePersonalData}>Delete account and data</button>
         </div>
         {privacyStatus && <p className="privacy-status">{privacyStatus}</p>}
+      </section>}
+
+      {authInfo.authenticated && <section className="data-rights" aria-label="Email settings">
+        <div>
+          <p className="eyebrow">Recovery email</p>
+          <h3>{authInfo.user?.email_verified ? "Verified email address" : "Add a recovery email"}</h3>
+          <p>{authInfo.user?.email_verified ? authInfo.user.email : "A verified email will be used for future password recovery and account notices."}</p>
+        </div>
+        <form className="email-form" onSubmit={addAccountEmail}>
+          <input type="email" value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="you@example.com" required />
+          <button className="primary-action">Send verification</button>
+        </form>
       </section>}
 
       <section className="account-settings" aria-label="Practice preferences">
