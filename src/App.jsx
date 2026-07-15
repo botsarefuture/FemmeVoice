@@ -447,6 +447,22 @@ export default function App() {
   const visualRangeHigh = Math.max(0, Math.min(100, ((dailySession.highMidi ?? dailySession.lowMidi ?? 54) - 48) / (visualRangeMaxMidi - 48) * 100));
   const sessionStats = useMemo(() => summarizeSession(history, current, dailySession), [history, current, dailySession]);
   const progressStats = useMemo(() => summarizeProgress(progress), [progress]);
+  const recordingsByDate = useMemo(() => savedRecordings.reduce((groups, recording) => {
+    const date = recordingDateKey(recording.created_at);
+    groups.set(date, [...(groups.get(date) ?? []), recording]);
+    return groups;
+  }, new Map()), [savedRecordings]);
+  const datedProgressHistory = useMemo(() => {
+    const days = new Map(progress.days.map((day) => [day.date, day]));
+    recordingsByDate.forEach((recordings, date) => {
+      if (!days.has(date)) days.set(date, { date, lowMidi: null, highMidi: null, comfortLowMidi: null, comfortHighMidi: null, attempts: 0, minutes: 0, seconds: 0, recordingsOnly: recordings.length > 0 });
+    });
+    return [...days.values()].sort((a, b) => {
+      if (a.date === "undated") return 1;
+      if (b.date === "undated") return -1;
+      return b.date.localeCompare(a.date);
+    });
+  }, [progress.days, recordingsByDate]);
   const hasPracticeHistory = progress.days.length > 0 || dailySession.attempts.length > 0 || dailySession.highMidi !== null;
   const dailyComparison = useMemo(
     () => buildDailyComparison(progress.days, dailySession),
@@ -1779,8 +1795,33 @@ export default function App() {
         </div>
       </section>
       <section className="range-history" aria-label="Dated voice range history">
-        <div><p className="eyebrow">Your range over time</p><h2>A dated record of what you explored and matched.</h2><p>Explored pitch is a short, steady sound. Verified matches are the longer target checks FemmeVoice uses to advance your lesson.</p></div>
-        {progress.days.length ? <ol>{progress.days.map((day) => <li key={day.date}><time dateTime={day.date}>{formatHistoryDate(day.date)}</time><span>{day.highMidi === null ? "No explored pitch saved" : `Explored: ${formatReliableRange(day.lowMidi, day.highMidi)}`}</span><small>{day.comfortHighMidi === null ? "No verified match yet" : `Verified: ${formatReliableRange(day.comfortLowMidi, day.comfortHighMidi)}${day.comfort ? ` · Felt ${day.comfort}` : ""}`}</small></li>)}</ol> : <p className="muted">Your dated pitch history begins after your first steady sound.</p>}
+        <div><p className="eyebrow">Your practice by day</p><h2>Range, time, and private recordings in one place.</h2><p>Open a day to see the sounds you explored, time spent training, and any recordings you deliberately saved.</p></div>
+        {datedProgressHistory.length ? <ol className="day-history-list">{datedProgressHistory.map((day) => {
+          const recordings = recordingsByDate.get(day.date) ?? [];
+          const trainingSeconds = day.seconds ?? (day.minutes ?? 0) * 60;
+          return <li key={day.date}>
+            <details>
+              <summary>
+                <time dateTime={day.date}>{formatHistoryDate(day.date)}</time>
+                <span><strong>{formatTrainingTime(trainingSeconds)}</strong><small>{recordings.length ? `${recordings.length} private recording${recordings.length === 1 ? "" : "s"}` : "No private recordings saved"}</small></span>
+              </summary>
+              <div className="history-day-details">
+                <div className="history-measurements">
+                  <p><strong>Explored pitch</strong>{day.highMidi === null ? "No steady pitch saved" : formatReliableRange(day.lowMidi, day.highMidi)}</p>
+                  <p><strong>Verified match</strong>{day.comfortHighMidi === null ? "No verified match yet" : `${formatReliableRange(day.comfortLowMidi, day.comfortHighMidi)}${day.comfort ? ` · Felt ${day.comfort}` : ""}`}</p>
+                </div>
+                {recordings.length > 0 ? <div className="history-recordings">
+                  <div><strong>Private recordings</strong><small>Encrypted and only playable after you unlock your vault.</small></div>
+                  {recordings.map((recording) => <div className="history-recording" key={recording.recording_id || recording.id}>
+                    <span><strong>{recording.label}</strong><small>{Math.max(1, Math.round(recording.duration_ms / 1000))} sec</small></span>
+                    <button onClick={() => playPrivateRecording(recording)} disabled={playingRecording === (recording.recording_id || recording.id)}>{playingRecording === (recording.recording_id || recording.id) ? "Playing..." : "Play"}</button>
+                    <button className="icon-action" onClick={() => removePrivateRecording(recording)} aria-label={`Delete ${recording.label}`}><Trash2 /></button>
+                  </div>)}
+                </div> : <p className="history-no-recordings">No private recordings saved for this day. Recording stays off until you choose to save something.</p>}
+              </div>
+            </details>
+          </li>;
+        })}</ol> : <p className="muted">Your dated history begins after your first timed practice, steady sound, or saved recording.</p>}
       </section>
       <section className="private-vault progress-vault" aria-label="Private recordings">
         <div>
@@ -1796,9 +1837,7 @@ export default function App() {
           {vaultRecording && <button className="auth-action" onClick={discardPrivateRecording}>Discard take</button>}
           {vaultStatus && <p>{vaultStatus}</p>}
         </div>
-        {savedRecordings.length > 0 ? <div className="saved-recordings">
-          {savedRecordings.map((recording) => <div key={recording.recording_id || recording.id}><span><strong>{recording.label}</strong><small>{Math.max(1, Math.round(recording.duration_ms / 1000))} sec</small></span><button onClick={() => playPrivateRecording(recording)} disabled={playingRecording === (recording.recording_id || recording.id)}>{playingRecording === (recording.recording_id || recording.id) ? "Playing..." : "Play"}</button><button className="icon-action" onClick={() => removePrivateRecording(recording)} aria-label={`Delete ${recording.label}`}><Trash2 /></button></div>)}
-        </div> : <p className="vault-empty">Unlock your private vault in Settings, then record a note here. Automatic recording is a separate optional setting.</p>}
+        <p className="vault-empty">Your saved recordings appear under their practice day above. Unlock your private vault in Settings before recording or playing a clip.</p>
       </section>
       </>}
 
@@ -2191,7 +2230,26 @@ function formatStorage(bytes) {
 }
 
 function formatHistoryDate(date) {
+  if (date === "undated") return "Earlier recordings";
   return new Intl.DateTimeFormat(undefined, { day: "numeric", month: "numeric", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+}
+
+function recordingDateKey(createdAt) {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "undated";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatTrainingTime(seconds) {
+  const safeSeconds = Math.max(0, Math.round(seconds ?? 0));
+  if (!safeSeconds) return "No timed practice";
+  if (safeSeconds < 60) return `${safeSeconds} sec of practice`;
+  const minutes = Math.floor(safeSeconds / 60);
+  const remainder = safeSeconds % 60;
+  return `${minutes} min${remainder ? ` ${remainder} sec` : ""} of practice`;
 }
 
 function recordingAad(username, recordingId, mimeType) {

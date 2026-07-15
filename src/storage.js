@@ -72,14 +72,15 @@ export function mergeTodayIntoProgress(progress, session, preferences) {
     attempts: session.attempts.length,
     bestScore: bestAttempt?.score ?? null,
     bestNote: bestAttempt?.targetNote ?? null,
-    minutes: session.minutes,
+    seconds: session.seconds ?? session.minutes * 60,
+    minutes: Math.floor((session.seconds ?? session.minutes * 60) / 60),
     comfort: session.reflections?.at(-1)?.rating ?? null,
   };
   const days = [
     today,
     ...normalized.days.filter((day) => day.date !== session.date),
   ]
-    .filter((day) => day.attempts > 0 || day.lowMidi !== null || day.highMidi !== null)
+    .filter((day) => day.attempts > 0 || day.lowMidi !== null || day.highMidi !== null || (day.seconds ?? day.minutes * 60) > 0)
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, historyRetentionDays);
 
@@ -196,6 +197,7 @@ function mergeDay(a, b) {
     attempts: Math.max(a.attempts ?? 0, b.attempts ?? 0),
     bestScore: maxDefined(a.bestScore, b.bestScore),
     bestNote: best.bestNote ?? a.bestNote ?? b.bestNote ?? null,
+    seconds: Math.max(a.seconds ?? (a.minutes ?? 0) * 60, b.seconds ?? (b.minutes ?? 0) * 60),
     minutes: Math.max(a.minutes ?? 0, b.minutes ?? 0),
     comfort: b.comfort ?? a.comfort ?? null,
   };
