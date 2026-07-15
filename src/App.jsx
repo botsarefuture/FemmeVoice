@@ -826,14 +826,16 @@ export default function App() {
       if (progressTimerRef.current) window.clearInterval(progressTimerRef.current);
       progressTimerRef.current = null;
       const result = scoreAttempt({ targetFrequency, samples: attemptSamplesRef.current });
-      const stepDown = !result.matched && activeStep === "pitch" && targetMisses >= 1 && targetIndex > 0;
+      const stepDown = result.stableBelowTarget && activeStep === "pitch" && targetMisses >= 1 && targetIndex > 0;
       const achievedMidi = frequencyToMidi(targetFrequency * 2 ** (result.cents / 1200));
       const enriched = {
         ...result,
         mode: exerciseMode,
         step: activeStep,
         time: Date.now(),
-        adaptation: stepDown ? "This note is not ready today. FemmeVoice moved back one comfortable step." : null,
+        adaptation: result.stableAboveTarget
+          ? "You are already above this reference. Keep the target, take a breath, and give yourself time to let the next sound settle toward it."
+          : stepDown ? "This note is not ready today. FemmeVoice moved back one comfortable step." : null,
         achievedMidi,
       };
       setLastScore(enriched);
@@ -847,7 +849,9 @@ export default function App() {
         setTargetMisses(0);
         setTargetIndex((index) => Math.min(EXERCISE_STEPS.length - 1, index + 1));
       } else if (activeStep === "pitch") {
-        if (stepDown) {
+        if (result.stableAboveTarget) {
+          setTargetMisses(0);
+        } else if (stepDown) {
           setTargetIndex((index) => Math.max(0, index - 1));
           setTargetMisses(0);
         } else {

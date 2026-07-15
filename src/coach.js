@@ -67,6 +67,9 @@ export function scoreAttempt({ targetFrequency, samples }) {
   // A beginner needs room to learn the motion. This rewards a relaxed,
   // reasonably steady repeat instead of demanding near-perfect cents.
   const accuracy = Math.max(0, 100 - Math.abs(mean) * 0.8 - spread * 0.65);
+  const stable = spread <= 45;
+  const stableAboveTarget = stable && mean > 55;
+  const stableBelowTarget = stable && mean < -55;
 
   let label = "Good data, try one small adjustment";
   if (accuracy >= 82) label = "Lovely, repeatable match";
@@ -78,6 +81,8 @@ export function scoreAttempt({ targetFrequency, samples }) {
     label,
     cents: Math.round(mean),
     spread: Math.round(spread),
+    stableAboveTarget,
+    stableBelowTarget,
     matched: accuracy >= 64,
     targetNote: midiToNoteName(frequencyToMidi(targetFrequency)),
   };
