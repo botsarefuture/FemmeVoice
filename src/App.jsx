@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
+  BookOpen,
   Bot,
   CheckCircle2,
   ChevronLeft,
@@ -18,6 +19,7 @@ import {
   Target,
   Timer,
   Trophy,
+  UserRound,
   Volume2,
   Waves,
 } from "lucide-react";
@@ -47,6 +49,19 @@ import {
 const EXERCISE_STEPS = [0, 1, 2, 3, 5, 7, 8, 10, 12];
 const DEFAULT_COMFORT_ANCHOR = 52;
 const MAX_TRAINING_MIDI = 77;
+
+const APP_VIEWS = [
+  { id: "today", label: "Today", icon: HeartPulse },
+  { id: "practice", label: "Practice", icon: Waves },
+  { id: "progress", label: "Progress", icon: Activity },
+  { id: "learn", label: "Learn", icon: BookOpen },
+  { id: "account", label: "Account", icon: UserRound },
+];
+
+function initialView() {
+  const view = window.location.hash.replace("#", "");
+  return APP_VIEWS.some((item) => item.id === view) ? view : "today";
+}
 
 const PRACTICE_FLOW = [
   {
@@ -237,6 +252,7 @@ const LEARNING_RESOURCES = [
 ];
 
 export default function App() {
+  const [activeView, setActiveView] = useState(initialView);
   const [deviceId] = useState(getDeviceId);
   const [listening, setListening] = useState(false);
   const [micError, setMicError] = useState("");
@@ -324,6 +340,12 @@ export default function App() {
   const visibleResources = resourceFilter === "all"
     ? LEARNING_RESOURCES
     : LEARNING_RESOURCES.filter((resource) => resource.category === resourceFilter);
+
+  useEffect(() => {
+    const handleHashChange = () => setActiveView(initialView());
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
 
   useEffect(() => {
     saveTodaySession(dailySession);
@@ -572,6 +594,12 @@ export default function App() {
     setLastScore(null);
   }
 
+  function navigateTo(view) {
+    window.location.hash = view;
+    setActiveView(view);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function selectPracticeStep(stepId) {
     setActiveStep(stepId);
     setExerciseMode(STEP_MODES[stepId] ?? "comfort-ladder");
@@ -707,7 +735,34 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <section className="hero">
+      <header className="app-topbar">
+        <button className="brand" onClick={() => navigateTo("today")} aria-label="FemmeVoice home">
+          <span>F</span>
+          <strong>FemmeVoice</strong>
+        </button>
+        <nav className="app-nav" aria-label="Main navigation">
+          {APP_VIEWS.map((view) => {
+            const Icon = view.icon;
+            return (
+              <button
+                className={activeView === view.id ? "selected" : ""}
+                key={view.id}
+                onClick={() => navigateTo(view.id)}
+                aria-current={activeView === view.id ? "page" : undefined}
+              >
+                <Icon />
+                <span>{view.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        <button className="profile-button" onClick={() => navigateTo("account")} aria-label="Open account">
+          <UserRound />
+          <span>{authInfo.authenticated ? (authInfo.user?.display_name || authInfo.user?.username) : "Account"}</span>
+        </button>
+      </header>
+
+      {activeView === "today" && <section className="hero">
         <div>
           <p className="eyebrow">FemmeVoice</p>
           <h1>Find a voice that feels easy, expressive, and yours.</h1>
@@ -717,13 +772,6 @@ export default function App() {
           </p>
         </div>
         <div className="hero-actions">
-          {authInfo.authenticated ? (
-            <button className="auth-action" onClick={signOut}>
-              {authInfo.user?.display_name || authInfo.user?.username || "Signed in"}
-            </button>
-          ) : (
-            <button className="auth-action" onClick={() => setAccountMode("login")}>Sign in to save progress</button>
-          )}
           <button className="primary-action" onClick={listening ? stopListening : startListening}>
             {listening ? <Square /> : <Mic />}
             {listening ? "Stop mic" : "Start mic"}
@@ -732,8 +780,17 @@ export default function App() {
             <RotateCcw />
           </button>
         </div>
-      </section>
+      </section>}
 
+      {activeView !== "today" && (
+        <section className="view-intro">
+          <p className="eyebrow">FemmeVoice</p>
+          <h1>{APP_VIEWS.find((view) => view.id === activeView)?.label}</h1>
+          <p>{activeView === "practice" ? "One calm exercise at a time. Stop any time your voice stops feeling easy." : activeView === "progress" ? "Your practice history, range notes, and gentle next steps." : activeView === "learn" ? "Simple explanations first, then deeper resources whenever you want them." : "Your private FemmeVoice account, preferences, and safety information."}</p>
+        </section>
+      )}
+
+      {activeView === "today" && <>
       <section className="beginner-coach" aria-label="Beginner coach">
         <div className="coach-script">
           <span className="coach-avatar"><Bot /></span>
@@ -772,35 +829,6 @@ export default function App() {
         <Metric icon={<HeartPulse />} label="Effort signal" value={sessionStats.effortLabel} detail={`Mic level ${Math.round(current.volume * 1000)}`} />
       </section>
 
-      <section className="progress-dashboard" aria-label="Progress over time">
-        <div className="progress-summary">
-          <p className="eyebrow">Progress memory</p>
-          <h2>Last time you reached {midiToNoteName(rememberedTargetMidi)} in {MODE_LABELS[progress.lastMode]}.</h2>
-          <p>
-            Best saved range: {formatRange(progress.bestLowMidi, progress.bestHighMidi)}.
-            {progress.bestScore !== null ? ` Best scored repeat: ${progress.bestScore}/100 on ${progress.bestScoreNote}.` : " Score a repeat to start building your history."}
-          </p>
-          <span className={syncStatus === "synced" ? "sync-pill synced" : "sync-pill"}>
-            {syncStatus === "synced"
-              ? authInfo.authenticated ? "Account progress synced" : "Anonymous cloud synced"
-              : syncStatus === "syncing" ? "Syncing progress" : "Saved on this device"}
-          </span>
-        </div>
-        <div className="progress-stats">
-          <ProgressStat icon={<Trophy />} label="Practice days" value={progress.totalPracticeDays} detail={`${progressStats.streak} day streak`} />
-          <ProgressStat icon={<Target />} label="Scored repeats" value={progress.totalAttempts} detail={`${progressStats.averageScore}% recent avg`} />
-          <ProgressStat icon={<Gauge />} label="All-time range" value={`${progressStats.bestSpan} st`} detail={formatRange(progress.bestLowMidi, progress.bestHighMidi)} />
-        </div>
-        <div className="history-bars" aria-label="Recent practice history">
-          {progressStats.daysForChart.map((day) => (
-            <div className="history-day" key={day.date}>
-              <span style={{ height: `${day.height}%` }} />
-              <small>{day.label}</small>
-            </div>
-          ))}
-        </div>
-      </section>
-
       <section className="practice-tier-panel" aria-label="Practice tier and rest guidance">
         <div>
           <p className="eyebrow">Today’s training tier</p>
@@ -837,6 +865,18 @@ export default function App() {
         )}
       </section>
 
+      <section className="today-continue">
+        <div>
+          <p className="eyebrow">Ready when you are</p>
+          <h2>{activePractice.label}: {activePractice.title}</h2>
+          <p>{activePractice.prompt}</p>
+        </div>
+        <button className="primary-action" onClick={() => navigateTo("practice")}><Waves /> Continue practice</button>
+      </section>
+      </>}
+
+      {activeView === "practice" && <>
+      {micError && <p className="alert">{micError}</p>}
       <section className="practice-flow" aria-label="Practice flow">
         {PRACTICE_FLOW.map((step) => {
           const Icon = step.icon;
@@ -1073,22 +1113,6 @@ export default function App() {
             </p>
           </div>
 
-          <div className="account-settings">
-            <p className="eyebrow">Your settings</p>
-            <h3>Range view</h3>
-            {!authInfo.authenticated && <button className="account-link" onClick={() => setAccountMode("register")}>Create an account to sync progress</button>}
-            <label className="setting-toggle">
-              <input
-                type="checkbox"
-                checked={showExtendedRange}
-                onChange={(event) => setShowExtendedRange(event.target.checked)}
-              />
-              <span aria-hidden="true" />
-              <strong>Show extended upper range to F5</strong>
-            </label>
-            <p>Saved with your progress. Turn it on when you want to explore higher notes, not because you have to reach them.</p>
-          </div>
-
           <div className="tip-list">
             {tips.map((tip) => (
               <div className="tip" key={tip.title}>
@@ -1117,8 +1141,31 @@ export default function App() {
           </div>
         </aside>
       </section>
+      </>}
 
-      <section className="learning-library" aria-label="Voice-training learning library">
+      {activeView === "progress" && <section className="progress-dashboard" aria-label="Progress over time">
+        <div className="progress-summary">
+          <p className="eyebrow">Progress memory</p>
+          <h2>Last time you reached {midiToNoteName(rememberedTargetMidi)} in {MODE_LABELS[progress.lastMode]}.</h2>
+          <p>
+            Best saved range: {formatRange(progress.bestLowMidi, progress.bestHighMidi)}.
+            {progress.bestScore !== null ? ` Best scored repeat: ${progress.bestScore}/100 on ${progress.bestScoreNote}.` : "Score a repeat to begin your history."}
+          </p>
+          <span className={syncStatus === "synced" ? "sync-pill synced" : "sync-pill"}>
+            {syncStatus === "synced" ? authInfo.authenticated ? "Account progress synced" : "Anonymous cloud synced" : syncStatus === "syncing" ? "Syncing progress" : "Saved on this device"}
+          </span>
+        </div>
+        <div className="progress-stats">
+          <ProgressStat icon={<Trophy />} label="Practice days" value={progress.totalPracticeDays} detail={`${progressStats.streak} day streak`} />
+          <ProgressStat icon={<Target />} label="Scored repeats" value={progress.totalAttempts} detail={`${progressStats.averageScore}% recent avg`} />
+          <ProgressStat icon={<Gauge />} label="All-time range" value={`${progressStats.bestSpan} st`} detail={formatRange(progress.bestLowMidi, progress.bestHighMidi)} />
+        </div>
+        <div className="history-bars" aria-label="Recent practice history">
+          {progressStats.daysForChart.map((day) => <div className="history-day" key={day.date}><span style={{ height: `${day.height}%` }} /><small>{day.label}</small></div>)}
+        </div>
+      </section>}
+
+      {activeView === "learn" && <section className="learning-library" aria-label="Voice-training learning library">
         <div className="library-heading">
           <div>
             <p className="eyebrow">Learning library</p>
@@ -1157,6 +1204,30 @@ export default function App() {
             </a>
           ))}
         </div>
+      </section>}
+
+      {activeView === "account" && <>
+      <section className="account-page" aria-label="Account settings">
+        <div>
+          <p className="eyebrow">Private account</p>
+          <h2>{authInfo.authenticated ? `Signed in as ${authInfo.user?.display_name || authInfo.user?.username}` : "Keep your progress with you."}</h2>
+          <p>{authInfo.authenticated ? "Your practice history syncs privately to this account." : "Create an account to keep your training history across devices. No email address is required."}</p>
+        </div>
+        <div className="account-page-actions">
+          {authInfo.authenticated ? <button className="auth-action" onClick={signOut}>Sign out</button> : <><button className="primary-action" onClick={() => setAccountMode("register")}>Create account</button><button className="auth-action" onClick={() => setAccountMode("login")}>Sign in</button></>}
+          {!authInfo.authenticated && <a className="migration-link" href="/api/auth/migration">Transfer an existing training account before 1 Aug 2026</a>}
+        </div>
+      </section>
+
+      <section className="account-settings" aria-label="Practice preferences">
+        <p className="eyebrow">Practice preferences</p>
+        <h3>Range view</h3>
+        <label className="setting-toggle">
+          <input type="checkbox" checked={showExtendedRange} onChange={(event) => setShowExtendedRange(event.target.checked)} />
+          <span aria-hidden="true" />
+          <strong>Show extended upper range to F5</strong>
+        </label>
+        <p>Saved with your progress. Turn it on when you want to explore higher notes, not because you have to reach them.</p>
       </section>
 
       <section className="privacy-policy" id="privacy">
@@ -1170,6 +1241,7 @@ export default function App() {
         </div>
         <p className="privacy-note">Use a unique passphrase of at least 15 characters. Stop practice if your voice hurts, feels scratchy, or stays fatigued. Password recovery is intentionally unavailable until verified recovery can be implemented safely.</p>
       </section>
+      </>}
 
       {accountMode && (
         <div className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title">

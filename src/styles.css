@@ -46,6 +46,81 @@ svg {
   padding: 30px 0 52px;
 }
 
+.app-topbar {
+  min-height: 60px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 22px;
+  border-bottom: 1px solid rgba(35, 38, 34, 0.12);
+  padding-bottom: 16px;
+}
+
+.brand,
+.profile-button,
+.app-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #232622;
+  background: transparent;
+  font-weight: 760;
+}
+
+.brand span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #fff9ee;
+  background: #c65278;
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
+}
+
+.app-nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.app-nav button,
+.profile-button {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #56605a;
+  font-size: 0.9rem;
+}
+
+.app-nav button.selected {
+  color: #173d37;
+  background: rgba(33, 142, 126, 0.13);
+}
+
+.profile-button {
+  background: rgba(198, 82, 120, 0.11);
+}
+
+.view-intro {
+  max-width: 700px;
+  margin: 38px 0 26px;
+}
+
+.view-intro h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 4vw, 3.75rem);
+  line-height: 1;
+}
+
+.view-intro > p:last-child {
+  margin: 12px 0 0;
+  color: #525a54;
+  font-size: 1.05rem;
+}
+
 .hero {
   min-height: 236px;
   display: grid;
@@ -86,6 +161,55 @@ svg {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.today-continue,
+.account-page {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-top: 14px;
+  border: 1px solid rgba(33, 142, 126, 0.25);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(33, 142, 126, 0.08);
+}
+
+.today-continue h2,
+.today-continue p,
+.account-page h2,
+.account-page p {
+  margin: 0;
+}
+
+.today-continue h2,
+.account-page h2 {
+  font-size: 1.2rem;
+}
+
+.today-continue p,
+.account-page p {
+  margin-top: 6px;
+  color: #525a54;
+}
+
+.account-page {
+  margin-top: 0;
+  background: rgba(198, 82, 120, 0.07);
+  border-color: rgba(198, 82, 120, 0.24);
+}
+
+.account-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 8px;
+}
+
+.account-page + .account-settings {
+  max-width: 620px;
+  margin-top: 14px;
 }
 
 .primary-action,
@@ -1544,6 +1668,47 @@ canvas {
 }
 
 @media (max-width: 720px) {
+  .app-shell {
+    width: min(100% - 20px, 1220px);
+    padding-top: 14px;
+  }
+
+  .app-topbar {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+
+  .app-nav {
+    grid-column: 1 / -1;
+    order: 3;
+    justify-content: space-between;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .app-nav button {
+    flex: 1 0 auto;
+    justify-content: center;
+    padding: 0 8px;
+  }
+
+  .app-nav button span,
+  .profile-button span {
+    font-size: 0.76rem;
+  }
+
+  .today-continue,
+  .account-page {
+    display: grid;
+    align-items: start;
+  }
+
+  .account-page-actions {
+    justify-content: start;
+  }
+
   .hero,
   .metrics-grid,
   .micro-drills,
