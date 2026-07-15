@@ -1930,7 +1930,11 @@ function buildDailyComparison(days, todaySession) {
     String(yesterdayDate.getMonth() + 1).padStart(2, "0"),
     String(yesterdayDate.getDate()).padStart(2, "0"),
   ].join("-");
-  const yesterday = days.find((day) => day.date === yesterdayKey);
+  const yesterdayRecord = days.find((day) => day.date === yesterdayKey);
+  const yesterday = yesterdayRecord ? {
+    lowMidi: yesterdayRecord.comfortLowMidi,
+    highMidi: yesterdayRecord.comfortHighMidi,
+  } : null;
   const range = semitoneSpan(today.lowMidi, today.highMidi);
   const base = {
     highNote: today.highMidi === null ? "--" : midiToNoteName(today.highMidi),
