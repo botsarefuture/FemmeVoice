@@ -280,6 +280,7 @@ export default function App() {
   const [accountSubmitting, setAccountSubmitting] = useState(false);
   const [privacyStatus, setPrivacyStatus] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
 
@@ -733,12 +734,16 @@ export default function App() {
 
   async function addAccountEmail(event) {
     event.preventDefault();
+    if (emailSubmitting) return;
     try {
+      setEmailSubmitting(true);
       setPrivacyStatus("");
       await requestEmailVerification(emailAddress);
       setPrivacyStatus("Check your inbox to verify this email address. The link expires in one hour.");
     } catch (error) {
       setPrivacyStatus(error.message);
+    } finally {
+      setEmailSubmitting(false);
     }
   }
 
@@ -1344,8 +1349,8 @@ export default function App() {
           <p>{authInfo.user?.email_verified ? authInfo.user.email : "A verified email will be used for future password recovery and account notices."}</p>
         </div>
         <form className="email-form" onSubmit={addAccountEmail}>
-          <input type="email" value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="you@example.com" required />
-          <button className="primary-action">Send verification</button>
+          <input type="email" value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="you@example.com" disabled={emailSubmitting} required />
+          <button className="primary-action" disabled={emailSubmitting}>{emailSubmitting ? "Sending verification..." : "Send verification"}</button>
         </form>
       </section>}
 
