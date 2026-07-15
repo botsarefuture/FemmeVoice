@@ -113,6 +113,67 @@ const HUM_DRILLS = [
   },
 ];
 
+const STEP_MODES = {
+  warmup: "comfort-ladder",
+  pitch: "comfort-ladder",
+  resonance: "resonance-step",
+  speech: "speech-floor",
+  cooldown: "comfort-ladder",
+};
+
+const STAGE_EXERCISES = {
+  warmup: {
+    eyebrow: "Warmup circuit",
+    duration: "2 min",
+    nextLabel: "Go to pitch",
+    cards: [
+      { title: "Hear it", text: "Make one quiet hum and notice where it feels easiest to keep steady." },
+      { title: "Soften it", text: "Try oo, vv, or a lip trill at an everyday volume. No reaching yet." },
+      { title: "Wake it up", text: "Use a tiny comfortable slide, then pause. Easy repetition beats a big stretch." },
+    ],
+  },
+  pitch: {
+    eyebrow: "Pitch match",
+    duration: "3 min",
+    nextLabel: "Explore brightness",
+    cards: [
+      { title: "Hear it", text: "Hold the tone button and let the note settle in your ear before you copy it." },
+      { title: "Glide to it", text: "Start near your easy note, slide toward the target, and stop before effort appears." },
+      { title: "Check it", text: "Try a gentle 3-second match. A close, steady repeat unlocks only a small next step." },
+    ],
+  },
+  resonance: {
+    eyebrow: "Brightness explorer",
+    duration: "3 min",
+    nextLabel: "Bring it into speech",
+    cards: [
+      { title: "Keep pitch", text: "Stay near the reference note. This part is about changing colour, not climbing higher." },
+      { title: "Compare", text: "Alternate a round oo with a lighter ee or ih. Listen for the clearer, forward version." },
+      { title: "Choose ease", text: "Keep the version that feels and sounds sustainable. The app cannot grade resonance for you." },
+    ],
+  },
+  speech: {
+    eyebrow: "Speech transfer",
+    duration: "3 min",
+    nextLabel: "Cool down",
+    cards: [
+      { title: "Set up", text: "Make a short light hum near the reference, then keep that feeling for one phrase." },
+      { title: "Say it", text: 'Try "hey, I am here" with ordinary rhythm. Let the pitch move naturally.' },
+      { title: "Reset", text: "If it drops or tightens, return to the hum. One comfortable phrase is a real win." },
+    ],
+  },
+  cooldown: {
+    eyebrow: "Cooldown",
+    duration: "1 min",
+    nextLabel: "Back to warmup",
+    cards: [
+      { title: "Release", text: "Make a quiet downward slide or a relaxed hum. There is nothing left to achieve today." },
+      { title: "Check in", text: "Your voice should feel ordinary or easier than when you began. Stop if it feels scratchy." },
+      { title: "Recover", text: "Sip water and take a speaking break when you can. Progress comes from repeatable, comfortable practice." },
+    ],
+  },
+};
+
 const MODE_LABELS = {
   "comfort-ladder": "Light pitch exploration",
   "resonance-step": "Brightness exploration",
@@ -231,6 +292,7 @@ export default function App() {
   const tips = buildCoachTips({ history, targetFrequency, currentFrequency: current.frequency, dailySession });
   const activePractice = PRACTICE_FLOW.find((step) => step.id === activeStep) ?? PRACTICE_FLOW[0];
   const activeHumDrill = HUM_DRILLS[humDrillIndex] ?? HUM_DRILLS[0];
+  const activeStageExercise = STAGE_EXERCISES[activeStep] ?? STAGE_EXERCISES.warmup;
   const activeTier = PRACTICE_TIERS[practiceTier] ?? PRACTICE_TIERS.starter;
   const sessionPlan = useMemo(() => buildSessionPlan(activeTier, dailySession.minutes), [activeTier, dailySession.minutes]);
   const breakReminder = useMemo(
@@ -497,6 +559,25 @@ export default function App() {
     setHumDrillIndex((index) => (index + 1) % HUM_DRILLS.length);
   }
 
+  function selectPracticeStep(stepId) {
+    setActiveStep(stepId);
+    setExerciseMode(STEP_MODES[stepId] ?? "comfort-ladder");
+    setLastScore(null);
+  }
+
+  function advancePracticeStep() {
+    const currentIndex = PRACTICE_FLOW.findIndex((step) => step.id === activeStep);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % PRACTICE_FLOW.length;
+    selectPracticeStep(PRACTICE_FLOW[nextIndex].id);
+  }
+
+  function selectExerciseMode(mode) {
+    setExerciseMode(mode);
+    if (mode === "resonance-step") selectPracticeStep("resonance");
+    else if (mode === "speech-floor") selectPracticeStep("speech");
+    else selectPracticeStep("pitch");
+  }
+
   function moveTarget(direction) {
     setTargetIndex((index) => Math.max(0, Math.min(EXERCISE_STEPS.length - 1, index + direction)));
     setLastScore(null);
@@ -751,7 +832,7 @@ export default function App() {
             <button
               className={selected ? "flow-step selected" : "flow-step"}
               key={step.id}
-              onClick={() => setActiveStep(step.id)}
+              onClick={() => selectPracticeStep(step.id)}
               aria-pressed={selected}
             >
               <Icon />
@@ -777,7 +858,7 @@ export default function App() {
           <div className="exercise-controls">
             <label>
               Mode
-              <select value={exerciseMode} onChange={(event) => setExerciseMode(event.target.value)}>
+              <select value={exerciseMode} onChange={(event) => selectExerciseMode(event.target.value)}>
                 <option value="comfort-ladder">Light pitch exploration</option>
                 <option value="resonance-step">Brightness exploration</option>
                 <option value="speech-floor">Speech transfer</option>
@@ -815,10 +896,12 @@ export default function App() {
               <Volume2 />
               {isPlayingTone ? "Release to stop" : "Hold to hear"}
             </button>
-            <button className="primary-action" onClick={beginAttempt} disabled={recordingAttempt}>
-              <Target />
-              {recordingAttempt ? "Listening..." : "Try 3-second match"}
-            </button>
+            {activeStep !== "cooldown" && (
+              <button className="primary-action" onClick={beginAttempt} disabled={recordingAttempt}>
+                <Target />
+                {recordingAttempt ? "Listening..." : activeStep === "speech" ? "Check 3-second phrase" : activeStep === "resonance" ? "Check pitch hold" : "Try 3-second match"}
+              </button>
+            )}
             <button className="icon-action" onClick={() => moveTarget(1)} disabled={targetIndex === EXERCISE_STEPS.length - 1} aria-label="Try the next small step" title="Try the next small step">
               <ChevronRight />
             </button>
@@ -847,31 +930,47 @@ export default function App() {
             </div>
           </section>
 
-          <div className="hum-circuit" aria-label="Guided humming warmup">
-            <div className="hum-circuit-heading">
-              <div>
-                <p className="eyebrow">Humming circuit</p>
-                <h3>{activeHumDrill.title}</h3>
+          {activeStep === "warmup" ? (
+            <div className="hum-circuit" aria-label="Guided humming warmup">
+              <div className="hum-circuit-heading">
+                <div>
+                  <p className="eyebrow">Humming circuit</p>
+                  <h3>{activeHumDrill.title}</h3>
+                </div>
+                <span>{activeHumDrill.duration}</span>
               </div>
-              <span>{activeHumDrill.duration}</span>
+              <p>{activeHumDrill.cue}</p>
+              <div className="hum-drill-steps">
+                {HUM_DRILLS.map((drill, index) => (
+                  <button
+                    className={index === humDrillIndex ? "selected" : ""}
+                    key={drill.title}
+                    onClick={() => setHumDrillIndex(index)}
+                    aria-pressed={index === humDrillIndex}
+                    aria-label={`Warmup drill ${index + 1}: ${drill.title}`}
+                  >
+                    {index + 1}
+                  </button>
+                ))}
+                <button className="next-hum" onClick={nextHumDrill}>Next hum</button>
+                <button className="next-stage" onClick={advancePracticeStep}>Go to pitch <ChevronRight /></button>
+              </div>
             </div>
-            <p>{activeHumDrill.cue}</p>
-            <div className="hum-drill-steps">
-              {HUM_DRILLS.map((drill, index) => (
-                <button
-                  className={index === humDrillIndex ? "selected" : ""}
-                  key={drill.title}
-                  onClick={() => setHumDrillIndex(index)}
-                  aria-pressed={index === humDrillIndex}
-                >
-                  {index + 1}
-                </button>
-              ))}
-              <button className="next-hum" onClick={nextHumDrill}>
-                Next hum
+          ) : (
+            <section className="stage-exercise" aria-label={`${activePractice.label} exercise`}>
+              <div className="stage-exercise-heading">
+                <div>
+                  <p className="eyebrow">{activeStageExercise.eyebrow}</p>
+                  <h3>{activePractice.title}</h3>
+                </div>
+                <span>{activeStageExercise.duration}</span>
+              </div>
+              <p>{activePractice.prompt}</p>
+              <button className="next-stage" onClick={advancePracticeStep}>
+                {activeStageExercise.nextLabel} <ChevronRight />
               </button>
-            </div>
-          </div>
+            </section>
+          )}
 
           <div className="practice-principles" aria-label="Training principles">
             <div><strong>Listen first</strong><span>Try a sound, notice its colour, then try a small change.</span></div>
@@ -904,10 +1003,10 @@ export default function App() {
             <p>Every voice has its own comfortable range. These bands are a visual guide for exploration, not a promise about what you should sound like or reach.</p>
           </div>
 
-          <div className="micro-drills" aria-label="Transfemme voice practice prompts">
-            <PracticeCard number="1" title="Hear it" text="Play the tone once, then imagine it as small, forward, and unforced." />
-            <PracticeCard number="2" title="Shape it" text='Repeat on "ee", "ih", or a soft hum while keeping throat effort low.' />
-            <PracticeCard number="3" title="Speak it" text='Say "hey, I am here" near the same pitch, keeping the resonance bright.' />
+          <div className="micro-drills" aria-label={`${activePractice.label} practice prompts`}>
+            {activeStageExercise.cards.map((card, index) => (
+              <PracticeCard key={card.title} number={String(index + 1)} title={card.title} text={card.text} />
+            ))}
           </div>
 
           {lastScore && (
@@ -1294,6 +1393,14 @@ function getBeginnerInstruction({ activeStep, listening, current, currentCents, 
       text: 'Say "hey, I am here" lightly. If the phrase drops, go back to one easy hum and try again.',
       action: "Speak it, then score another repeat.",
       why: "The real goal is a voice you can use outside drills.",
+    };
+  }
+  if (activeStep === "cooldown") {
+    return {
+      title: "Finish with a voice that still feels easy.",
+      text: "Use a quiet downward slide or gentle hum, then stop. You do not need another scored repeat today.",
+      action: "Release the sound and take a break.",
+      why: "A calm finish helps you notice fatigue early and keeps practice sustainable.",
     };
   }
   return {

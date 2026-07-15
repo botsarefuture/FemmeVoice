@@ -799,6 +799,70 @@ svg {
   background: #232622;
 }
 
+.next-stage {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: #fff9ee;
+  background: #218e7e;
+  font-weight: 760;
+}
+
+.next-stage svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stage-exercise {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(33, 142, 126, 0.24);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(33, 142, 126, 0.075);
+}
+
+.stage-exercise-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.stage-exercise-heading h3,
+.stage-exercise-heading p,
+.stage-exercise > p {
+  margin: 0;
+}
+
+.stage-exercise-heading h3 {
+  font-size: 1.1rem;
+  line-height: 1.15;
+}
+
+.stage-exercise-heading > span {
+  flex: none;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: #17665b;
+  background: rgba(33, 142, 126, 0.14);
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.stage-exercise > p {
+  color: #525a54;
+}
+
+.stage-exercise .next-stage {
+  justify-self: start;
+}
+
 .practice-principles {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
