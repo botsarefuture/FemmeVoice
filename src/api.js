@@ -88,3 +88,7 @@ export async function deleteAccount() {
 export async function requestEmailVerification(email) {
   return secureRequest("/api/account/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
 }
+
+export async function submitFeedback(payload) {
+  return secureRequest("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+}

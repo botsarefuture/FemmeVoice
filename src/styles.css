@@ -324,6 +324,18 @@ svg {
 .privacy-policy-heading > div > p:last-child { margin-top: 8px; color: #525a54; }
 .privacy-page .privacy-grid article { min-height: 144px; }
 .privacy-page .privacy-grid a { color: #17665b; font-weight: 720; }
+
+.feedback-page { max-width: 760px; }
+.feedback-note { display: flex; gap: 14px; align-items: start; margin-bottom: 18px; }
+.feedback-note > svg { width: 30px; height: 30px; flex: none; color: #c65278; }
+.feedback-note h2, .feedback-note p { margin: 0; }
+.feedback-note > div > p:last-child { margin-top: 8px; color: #525a54; }
+.feedback-form { display: grid; gap: 14px; border: 1px solid rgba(35, 38, 34, 0.13); border-radius: 8px; padding: 18px; background: rgba(255, 252, 246, 0.84); }
+.feedback-form label { display: grid; gap: 7px; font-weight: 720; }
+.feedback-form select, .feedback-form textarea { width: 100%; border: 1px solid rgba(35, 38, 34, 0.2); border-radius: 8px; padding: 10px; color: #232622; background: #fffdf8; }
+.feedback-form textarea { min-height: 150px; resize: vertical; }
+.feedback-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.feedback-actions p { margin: 0; color: #17665b; font-weight: 720; }
 .danger-action { min-height: 44px; border-radius: 8px; padding: 0 14px; color: #8f1e3a; background: rgba(198, 82, 120, 0.14); font-weight: 760; }
 .privacy-status { grid-column: 1 / -1; color: #17665b !important; font-weight: 700; }
 

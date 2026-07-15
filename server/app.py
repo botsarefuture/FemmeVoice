@@ -57,11 +57,13 @@ progress_collection = db["progress"]
 legacy_progress_collection = legacy_db["progress"]
 users_collection = db["users"]
 email_tokens_collection = db["email_tokens"]
+feedback_collection = db["feedback"]
 progress_collection.create_index([("device_id", ASCENDING)])
 progress_collection.create_index([("storage_key", ASCENDING)], unique=True)
 users_collection.create_index([("username_normalized", ASCENDING)], unique=True)
 users_collection.create_index([("email_normalized", ASCENDING)], unique=True, sparse=True)
 email_tokens_collection.create_index([("expires_at", ASCENDING)], expireAfterSeconds=0)
+feedback_collection.create_index([("created_at", ASCENDING)], expireAfterSeconds=60 * 60 * 24 * 365)
 
 
 @app.after_request
@@ -390,11 +392,33 @@ def delete_personal_data():
     legacy_key = f"luovaauth:{user['username']}"
     progress_collection.delete_many({"storage_key": {"$in": [user["key"], legacy_key]}})
     legacy_progress_collection.delete_many({"storage_key": legacy_key})
+    feedback_collection.delete_many({"user_id": user["id"]})
     users_collection.delete_one({"_id": ObjectId(user["id"])})
     session.clear()
     response = jsonify({"ok": True})
     response.headers["Clear-Site-Data"] = '"cache", "storage"'
     return response
+
+
+@app.post("/api/feedback")
+def submit_feedback():
+    if not csrf_required():
+        return auth_error("Your session expired. Refresh and try again.", 403)
+    payload = request.get_json(silent=True) or {}
+    category = str(payload.get("category", "")).strip().lower()
+    message = str(payload.get("message", "")).strip()
+    if category not in {"idea", "bug", "resource", "safety", "other"}:
+        return auth_error("Choose a feedback category.")
+    if not 10 <= len(message) <= 4000:
+        return auth_error("Feedback must be between 10 and 4,000 characters.")
+    user = user_from_request()
+    feedback_collection.insert_one({
+        "category": category,
+        "message": message,
+        "user_id": user["id"] if user else None,
+        "created_at": datetime.now(timezone.utc),
+    })
+    return jsonify({"ok": True})
 
 
 @app.get("/api/progress/<device_id>")

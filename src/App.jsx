@@ -11,6 +11,7 @@ import {
   Gauge,
   HeartPulse,
   Mic,
+  MessageCircle,
   Music2,
   PauseCircle,
   RotateCcw,
@@ -34,7 +35,7 @@ import {
   midiToNoteName,
   semitoneSpan,
 } from "./audio";
-import { deleteAccount, exportAccountData, loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, requestEmailVerification, saveCloudProgress } from "./api";
+import { deleteAccount, exportAccountData, loadCloudProgress, loadMe, loginAccount, logoutAccount, registerAccount, requestEmailVerification, saveCloudProgress, submitFeedback } from "./api";
 import { buildCoachTips, scoreAttempt } from "./coach";
 import {
   dayKey,
@@ -58,6 +59,7 @@ const APP_VIEWS = [
   { id: "learn", label: "Learn", icon: BookOpen },
   { id: "account", label: "Account", icon: UserRound },
   { id: "privacy", label: "Privacy", icon: ShieldCheck },
+  { id: "feedback", label: "Feedback", icon: MessageCircle },
 ];
 
 function initialView() {
@@ -281,6 +283,9 @@ export default function App() {
   const [privacyStatus, setPrivacyStatus] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({ category: "idea", message: "" });
+  const [feedbackStatus, setFeedbackStatus] = useState("");
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
 
@@ -764,6 +769,22 @@ export default function App() {
     }
   }
 
+  async function sendFeedback(event) {
+    event.preventDefault();
+    if (feedbackSubmitting) return;
+    try {
+      setFeedbackSubmitting(true);
+      setFeedbackStatus("");
+      await submitFeedback(feedbackForm);
+      setFeedbackForm({ category: "idea", message: "" });
+      setFeedbackStatus("Thank you. Your feedback was received.");
+    } catch (error) {
+      setFeedbackStatus(error.message);
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  }
+
   function drawVisualizer() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -900,7 +921,7 @@ export default function App() {
         <section className="view-intro">
           <p className="eyebrow">FemmeVoice</p>
           <h1>{APP_VIEWS.find((view) => view.id === activeView)?.label}</h1>
-          <p>{activeView === "practice" ? "One calm exercise at a time. Stop any time your voice stops feeling easy." : activeView === "progress" ? "Your practice history, range notes, and gentle next steps." : activeView === "learn" ? "Simple explanations first, then deeper resources whenever you want them." : activeView === "privacy" ? "A plain-language account of what FemmeVoice stores, why, and how you stay in control." : "Your private FemmeVoice account, preferences, and safety information."}</p>
+          <p>{activeView === "practice" ? "One calm exercise at a time. Stop any time your voice stops feeling easy." : activeView === "progress" ? "Your practice history, range notes, and gentle next steps." : activeView === "learn" ? "Simple explanations first, then deeper resources whenever you want them." : activeView === "privacy" ? "A plain-language account of what FemmeVoice stores, why, and how you stay in control." : activeView === "feedback" ? "Tell us what feels useful, unclear, missing, or unsafe. Thoughtful feedback shapes FemmeVoice." : "Your private FemmeVoice account, preferences, and safety information."}</p>
         </section>
       )}
 
@@ -1420,6 +1441,15 @@ export default function App() {
           <article><h3>Security</h3><p>We use HTTPS, secure session cookies, CSRF protection, password hashing, access controls, and data minimisation. No security measure is absolute; report a concern through the security policy in the public repository.</p></article>
         </div>
         <p className="privacy-note">You may lodge a complaint with your local data-protection authority. In Finland, this is the Office of the Data Protection Ombudsman.</p>
+      </section>}
+
+      {activeView === "feedback" && <section className="feedback-page" aria-label="Send FemmeVoice feedback">
+        <div className="feedback-note"><MessageCircle /><div><p className="eyebrow">Help shape FemmeVoice</p><h2>What should feel better?</h2><p>Do not include passwords, private recordings, or urgent medical information. Safety concerns are welcome and will be prioritised.</p></div></div>
+        <form className="feedback-form" onSubmit={sendFeedback}>
+          <label>Kind of feedback<select value={feedbackForm.category} onChange={(event) => setFeedbackForm((form) => ({ ...form, category: event.target.value }))}><option value="idea">Feature idea</option><option value="bug">Something is broken</option><option value="resource">Resource or exercise suggestion</option><option value="safety">Safety concern</option><option value="other">Something else</option></select></label>
+          <label>Message<textarea value={feedbackForm.message} onChange={(event) => setFeedbackForm((form) => ({ ...form, message: event.target.value }))} minLength="10" maxLength="4000" placeholder="What happened, what did you expect, or what would help?" required /></label>
+          <div className="feedback-actions"><button className="primary-action" disabled={feedbackSubmitting}>{feedbackSubmitting ? "Sending feedback..." : "Send feedback"}</button>{feedbackStatus && <p>{feedbackStatus}</p>}</div>
+        </form>
       </section>}
 
       {accountMode && (
