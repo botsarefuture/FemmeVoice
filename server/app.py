@@ -34,7 +34,7 @@ app = Flask(__name__, static_folder=str(DIST), static_url_path="")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config.update(
-    SESSION_COOKIE_NAME="lilt_session",
+    SESSION_COOKIE_NAME="femmevoice_session",
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
@@ -189,11 +189,11 @@ def finish_migration_identity():
     token = request.args.get("token", "")
     if not token:
         return redirect("/?transfer=failed")
-    request_data = urllib.parse.urlencode({"token": token}).encode()
+    request_data = b'{"token":"' + token.encode().replace(b'"', b"") + b'"}'
     try:
         with urllib.request.urlopen(urllib.request.Request(
             f"{LEGACY_AUTH_BASE}/user_info", data=request_data,
-            headers={"Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json"}, method="POST",
+            headers={"Content-Type": "application/json", "Accept": "application/json"}, method="POST",
         ), timeout=5) as response:
             import json
             payload = json.loads(response.read().decode("utf-8"))
