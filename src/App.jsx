@@ -57,6 +57,7 @@ import { APP_VERSION } from "./version";
 const EXERCISE_STEPS = [0, 1, 2, 3, 5, 7, 8, 10, 12];
 const DEFAULT_COMFORT_ANCHOR = 52;
 const MAX_TRAINING_MIDI = 77;
+const MIN_SPEECH_REFERENCE_MIDI = 50; // D3: an exercise floor, never a gender requirement.
 const REMINDER_DAYS = [
   { value: 0, label: "Mon" }, { value: 1, label: "Tue" }, { value: 2, label: "Wed" }, { value: 3, label: "Thu" },
   { value: 4, label: "Fri" }, { value: 5, label: "Sat" }, { value: 6, label: "Sun" },
@@ -424,14 +425,15 @@ export default function App() {
     if (exerciseMode === "resonance-step" && dailySession.highMidi !== null) {
       return Math.min(MAX_TRAINING_MIDI, Math.max(45, Math.round(dailySession.highMidi)));
     }
-    if (exerciseMode === "speech-floor" && dailySession.lowMidi !== null) {
-      return Math.min(MAX_TRAINING_MIDI, Math.max(45, Math.round(dailySession.lowMidi) + 2));
+    if (exerciseMode === "speech-floor") {
+      const easySpeechAnchor = dailySession.comfortHighMidi ?? comfortAnchorMidi ?? dailySession.highMidi ?? DEFAULT_COMFORT_ANCHOR;
+      return Math.min(MAX_TRAINING_MIDI, Math.max(MIN_SPEECH_REFERENCE_MIDI, Math.round(easySpeechAnchor)));
     }
     return Math.min(
       MAX_TRAINING_MIDI,
       (comfortAnchorMidi ?? DEFAULT_COMFORT_ANCHOR) + (EXERCISE_STEPS[targetIndex] ?? EXERCISE_STEPS[0]),
     );
-  }, [comfortAnchorMidi, dailySession.highMidi, dailySession.lowMidi, exerciseMode, targetIndex]);
+  }, [comfortAnchorMidi, dailySession.comfortHighMidi, dailySession.highMidi, exerciseMode, targetIndex]);
 
   const targetFrequency = midiToFrequency(targetMidi);
   const targetLowFrequency = targetFrequency * 2 ** (-TARGET_MATCH_TOLERANCE_CENTS / 1200);
@@ -1437,12 +1439,16 @@ export default function App() {
       {activeView === "practice" && <>
       {micError && <p className="alert">{micError}</p>}
       <section className="practice-style-picker" aria-label="Practice style">
-        <div><p className="eyebrow">Practice style</p><h2>{practiceStyle === "guided" ? "Let FemmeVoice lead" : "Make the session your own"}</h2></div>
+        <div><p className="eyebrow">Practice style</p><h2>{practiceStyle === "guided" ? "Let FemmeVoice lead" : "Make the session your own"}</h2><p>{practiceStyle === "guided" ? "One small stage at a time. FemmeVoice moves on after comfortable practice, and you can stop whenever you need." : "Choose any stage, replay a reference, and work at your own pace."}</p></div>
         <div role="group" aria-label="Choose practice style">
           <button className={practiceStyle === "guided" ? "selected" : ""} onClick={enterGuidedPractice} aria-pressed={practiceStyle === "guided"}>Guided</button>
           <button className={practiceStyle === "free" ? "selected" : ""} onClick={() => setPracticeStyle("free")} aria-pressed={practiceStyle === "free"}>Free practice</button>
         </div>
       </section>
+      {practiceStyle === "guided" && <section className="guided-route" aria-label="Guided session progress">
+        <div><p className="eyebrow">Your session path</p><h3>{activePractice.label} now, then one gentle next step.</h3><p>Warmup changes after four easy drills. Pitch, brightness, and speech move forward after comfortable repeats, not perfect notes.</p></div>
+        <ol>{PRACTICE_FLOW.map((step, index) => <li className={step.id === activeStep ? "current" : ""} key={step.id}><span>{index + 1}</span><strong>{step.label}</strong></li>)}</ol>
+      </section>}
       {practiceStyle === "free" && <section className="practice-flow" aria-label="Practice flow">
         {PRACTICE_FLOW.map((step) => {
           const Icon = step.icon;
@@ -1604,7 +1610,7 @@ export default function App() {
                     {index + 1}
                   </button>
                 ))}
-                <button className="next-hum" onClick={nextHumDrill}>Next hum</button>
+                <button className="next-hum" onClick={nextHumDrill}>{practiceStyle === "guided" && humDrillIndex === HUM_DRILLS.length - 1 ? "Start pitch" : "Next hum"}</button>
                 {practiceStyle === "free" && <button className="next-stage" onClick={advancePracticeStep}>Go to pitch <ChevronRight /></button>}
               </div>
             </div>
@@ -2370,9 +2376,9 @@ function getTargetExplanation({ exerciseMode, targetIndex, comfortAnchorMidi, ta
   }
   if (exerciseMode === "speech-floor") {
     return {
-      title: `A speech-friendly reference at ${midiToNoteName(targetMidi)}`,
-      text: "Speech naturally moves around. Aim near this note, then let the phrase have normal movement instead of holding it flat.",
-      change: "This reference uses today’s lower mapped note when available, so it stays connected to your usable voice.",
+      title: `Start speech around ${midiToNoteName(targetMidi)}, not your lowest note`,
+      text: "Speech naturally moves around. This uses your easy-hum or verified area and never treats a low range boundary as a speech starting point.",
+      change: "D3 is the lowest FemmeVoice will show as a speech reference. You do not need to hold speech flat or force yourself to reach any number.",
     };
   }
   const base = comfortAnchorMidi === null ? "a gentle starter note" : `your easy-hum anchor, ${midiToNoteName(comfortAnchorMidi)}`;

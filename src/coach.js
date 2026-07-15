@@ -2,6 +2,11 @@ import { centsOff, frequencyToMidi, midiToNoteName } from "./audio";
 
 export const TARGET_MATCH_TOLERANCE_CENTS = 50;
 
+// C3 is used only as a gentle boundary for coaching language. It is not a
+// gender target or a recommended speaking pitch; people start from different
+// comfortable places and should not lower their voice to chase an exercise.
+const PRACTICAL_SPEECH_EXPLORATION_FLOOR_HZ = 130.81;
+
 export function buildCoachTips({ history, targetFrequency, currentFrequency, dailySession }) {
   const voiced = history.filter((sample) => sample.frequency && sample.clarity > 0.35);
   const recent = voiced.slice(-40);
@@ -24,9 +29,29 @@ export function buildCoachTips({ history, targetFrequency, currentFrequency, dai
     midiValues.reduce((sum, midi) => sum + (midi - meanMidi) ** 2, 0) / midiValues.length,
   );
 
+  const isLowReference = targetFrequency && targetFrequency < PRACTICAL_SPEECH_EXPLORATION_FLOOR_HZ;
+
+  if (isLowReference) {
+    tips.push({
+      title: "This reference is only an anchor",
+      text: `${midiToNoteName(frequencyToMidi(targetFrequency))} is low for many speaking voices. It is not a speaking recommendation or a test to pass. Start from an easy natural hum instead, then choose a light-pitch exercise when that feels comfortable.`,
+    });
+  } else if (targetFrequency) {
+    tips.push({
+      title: "A target note is an exercise, not a verdict",
+      text: "Use this note as a short listening-and-repeating cue. Your comfortable speaking voice can sit elsewhere, and it can change from day to day.",
+    });
+  }
+
   if (targetFrequency && currentFrequency) {
     const cents = centsOff(currentFrequency, targetFrequency);
-    if (Math.abs(cents) <= 18) {
+    if (isLowReference) {
+      if (cents > TARGET_MATCH_TOLERANCE_CENTS) {
+        tips.push({ title: "Stay with what feels easy", text: "You are already above this low anchor. Do not lower your voice to chase it; keep the relaxed pitch you found or move to a lighter exercise." });
+      } else {
+        tips.push({ title: "Reset to your natural hum", text: "This low anchor is not worth forcing. Let the sound return to an easy, clear hum and continue from there." });
+      }
+    } else if (Math.abs(cents) <= 18) {
       tips.push({ title: "That pitch is centered", text: "Good. Now make it feel repeatable: light airflow, forward buzz, and no extra loudness." });
     } else if (cents > 18) {
       tips.push({ title: "Let it settle a little", text: `You are ${Math.abs(cents)} cents above the target. Relax the jaw and think smaller, not lower.` });

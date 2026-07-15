@@ -86,6 +86,7 @@ Gender-affirming voice intervention research generally considers several dimensi
 - Change one variable at a time and use short, repeatable exercises.
 - Progress guided pitch after a comfortable hold, not after a single loud or momentary peak.
 - If a step is not accessible today, keep the session useful below that point and offer an easy reset, listening task, or speech carryover instead.
+- For speech transfer, use an easy-hum or verified comfortable area as the reference. Never derive a speech reference from the lowest pitch detected in a range map; a low range boundary is observation data, not a speaking recommendation.
 - Let people choose Starter, Steady, or Deep practice and remind them to rest.
 
 ### Limit
