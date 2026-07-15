@@ -4,6 +4,8 @@ An open-source, transfemme-focused voice-training practice companion.
 
 Contributions are welcome through issues and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before contributing.
 
+The evidence, safety boundaries, and feature-design principles are public in the [Research and Practice Guide](docs/research-guide.md). It is the source of truth for training-related product changes.
+
 FemmeVoice is released under the [MIT License](LICENSE).
 
 Transfemme voice-training web app.

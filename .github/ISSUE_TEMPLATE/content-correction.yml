@@ -1,0 +1,33 @@
+name: Content correction
+description: Report unclear, inaccurate, inaccessible, or harmful wording in FemmeVoice.
+title: "Content correction: "
+labels: [content]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include private recordings, health details, account data, or identifying information. For security or privacy vulnerabilities, use private vulnerability reporting instead."
+  - type: input
+    id: location
+    attributes:
+      label: Guide heading, page, or URL
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current wording or behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: correction
+    attributes:
+      label: Suggested correction and supporting source(s)
+    validations:
+      required: true
+  - type: checkboxes
+    id: urgency
+    attributes:
+      label: Urgency
+      options:
+        - label: This may be unsafe or harmful and should be reviewed promptly.
+          required: false

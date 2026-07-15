@@ -1,0 +1,36 @@
+name: Research source
+description: Suggest evidence or a source for the FemmeVoice Research and Practice Guide.
+title: "Research source: "
+labels: [research]
+body:
+  - type: markdown
+    attributes:
+      value: "Thank you. Do not include recordings, health details, account data, or identifying information."
+  - type: input
+    id: source
+    attributes:
+      label: Direct source link or DOI
+      placeholder: https://doi.org/...
+    validations:
+      required: true
+  - type: textarea
+    id: claim
+    attributes:
+      label: What exact claim does this support?
+      placeholder: Quote or paraphrase the claim, and point to the relevant section/page.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and limitations
+      placeholder: Population, language/context, study design, limitations, and conflicts of interest where known.
+    validations:
+      required: true
+  - type: checkboxes
+    id: ethics
+    attributes:
+      label: Safety check
+      options:
+        - label: This does not ask users to practise through pain, force the larynx, or perform swallowing drills.
+          required: true

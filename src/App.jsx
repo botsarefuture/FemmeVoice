@@ -1877,7 +1877,8 @@ export default function App() {
             <p>Suggest a source, flag wording that feels unclear or harmful, share a community resource, or improve the guide directly. We welcome lived experience alongside research, and label each clearly.</p>
           </div>
           <div className="contribution-actions">
-            <a href="https://github.com/botsarefuture/voice-luova-club/issues/new?title=Research%20source%20suggestion" target="_blank" rel="noreferrer">Suggest a source <ExternalLink /></a>
+            <a href="https://github.com/botsarefuture/voice-luova-club/blob/main/docs/research-guide.md" target="_blank" rel="noreferrer">Read the full guide <ExternalLink /></a>
+            <a href="https://github.com/botsarefuture/voice-luova-club/issues/new?template=research-source.yml" target="_blank" rel="noreferrer">Suggest a source <ExternalLink /></a>
             <a href="https://github.com/botsarefuture/voice-luova-club/pulls" target="_blank" rel="noreferrer">Open a pull request <ExternalLink /></a>
             <a href="https://discord.gg/Vh5N2WEJtU" target="_blank" rel="noreferrer">Discuss in the community <MessageCircle /></a>
           </div>

@@ -9,6 +9,8 @@ Thank you for helping make transfemme voice training more accessible.
 3. Run `npm run build` and `python3 -m py_compile server/app.py server/wsgi.py` before opening a pull request.
 4. Explain what changed, how it was tested, and any vocal-health or privacy implications.
 
+For any training, measurement, or educational change, read the [Research and Practice Guide](docs/research-guide.md). It explains the project’s evidence standard and the limits we must state plainly.
+
 ## Contribution principles
 
 - Be affirming, practical, and non-judgmental.
@@ -20,3 +22,5 @@ Thank you for helping make transfemme voice training more accessible.
 ## Pull requests
 
 Small, focused pull requests are easiest to review. Maintainers merge reviewed pull requests into `main`; please do not request direct production access.
+
+To suggest research or flag a guide error, use the repository's **Research source** or **Content correction** issue form. Never include private recordings, health details, passwords, or identifying information in a public issue.
