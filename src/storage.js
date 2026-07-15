@@ -22,6 +22,7 @@ export function loadTodaySession() {
     minutes: 0,
     seconds: 0,
     breakAcknowledged: [],
+    voiceCheck: "unset",
   };
 }
 

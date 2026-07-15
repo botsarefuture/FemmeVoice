@@ -334,6 +334,7 @@ export default function App() {
   const activeStageExercise = STAGE_EXERCISES[activeStep] ?? STAGE_EXERCISES.warmup;
   const activeTier = PRACTICE_TIERS[practiceTier] ?? PRACTICE_TIERS.starter;
   const sessionSeconds = dailySession.seconds ?? dailySession.minutes * 60;
+  const voiceCheck = dailySession.voiceCheck ?? "unset";
   const sessionPlan = useMemo(() => buildSessionPlan(activeTier, sessionSeconds), [activeTier, sessionSeconds]);
   const breakReminder = useMemo(
     () => getBreakReminder(activeTier, dailySession),
@@ -595,6 +596,10 @@ export default function App() {
   }
 
   async function beginAttempt() {
+    if (voiceCheck === "pain") {
+      setMicError("Skip scored practice today. Pain, persistent scratchiness, or unusual hoarseness is a reason to rest and seek a voice clinician if it continues.");
+      return;
+    }
     if (!listening) {
       const started = await startListening();
       if (!started) return;
@@ -627,7 +632,7 @@ export default function App() {
   }
 
   function resetDay() {
-    const reset = { date: dayKey(), lowMidi: null, highMidi: null, attempts: [], minutes: 0, seconds: 0, breakAcknowledged: [] };
+    const reset = { date: dayKey(), lowMidi: null, highMidi: null, attempts: [], minutes: 0, seconds: 0, breakAcknowledged: [], voiceCheck: "unset" };
     setDailySession(reset);
     saveTodaySession(reset);
     setHistory([]);
@@ -658,6 +663,11 @@ export default function App() {
       ...session,
       breakAcknowledged: [...new Set([...(session.breakAcknowledged ?? []), id])],
     }));
+  }
+
+  function selectVoiceCheck(value) {
+    setDailySession((session) => ({ ...session, voiceCheck: value }));
+    if (value === "pain") selectPracticeStep("cooldown");
   }
 
   function nextHumDrill() {
@@ -926,6 +936,11 @@ export default function App() {
       )}
 
       {activeView === "today" && <>
+      <section className={voiceCheck === "pain" ? "voice-check caution" : "voice-check"} aria-label="How does your voice feel today">
+        <div><p className="eyebrow">Before practice</p><h2>How does your voice feel today?</h2></div>
+        <div className="voice-check-options"><button className={voiceCheck === "easy" ? "selected" : ""} onClick={() => selectVoiceCheck("easy")}>Comfortable</button><button className={voiceCheck === "tired" ? "selected" : ""} onClick={() => selectVoiceCheck("tired")}>Tired or dry</button><button className={voiceCheck === "pain" ? "selected" : ""} onClick={() => selectVoiceCheck("pain")}>Pain or hoarseness</button></div>
+        <p>{voiceCheck === "pain" ? "Choose rest or listening today. Do not push through pain." : voiceCheck === "tired" ? "Keep this brief: warm up, explore gently, and skip higher targets." : "Your answer helps FemmeVoice suggest a pace. You can change it any time."}</p>
+      </section>
       <section className="beginner-coach" aria-label="Beginner coach">
         <div className="coach-script">
           <span className="coach-avatar"><Bot /></span>
