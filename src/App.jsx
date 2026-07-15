@@ -199,6 +199,12 @@ const STAGE_EXERCISES = {
   },
 };
 
+const GUIDED_MATCH_GOALS = {
+  pitch: 3,
+  resonance: 2,
+  speech: 2,
+};
+
 const MODE_LABELS = {
   "comfort-ladder": "Light pitch exploration",
   "resonance-step": "Brightness exploration",
@@ -847,26 +853,38 @@ export default function App() {
       const result = scoreAttempt({ targetFrequency, samples: attemptSamplesRef.current });
       const stepDown = result.stableBelowTarget && activeStep === "pitch" && targetMisses >= 1 && targetIndex > 0;
       const achievedMidi = frequencyToMidi(targetFrequency * 2 ** (result.cents / 1200));
+      const acceptedPitchMatch = result.matched && activeStep === "pitch";
+      const nextTargetIndex = Math.min(EXERCISE_STEPS.length - 1, targetIndex + 1);
+      const nextTargetMidi = Math.min(MAX_TRAINING_MIDI, (comfortAnchorMidi ?? DEFAULT_COMFORT_ANCHOR) + EXERCISE_STEPS[nextTargetIndex]);
       const enriched = {
         ...result,
         mode: exerciseMode,
         step: activeStep,
         time: Date.now(),
-        adaptation: result.stableAboveTarget
+        adaptation: acceptedPitchMatch && nextTargetIndex > targetIndex
+          ? `${result.targetNote} accepted. Moving to ${midiToNoteName(nextTargetMidi)} for the next repeat.`
+          : result.stableAboveTarget
           ? "You are already above this reference. Keep the target, take a breath, and give yourself time to let the next sound settle toward it."
           : stepDown ? "This note is not ready today. FemmeVoice moved back one comfortable step." : null,
         achievedMidi,
+        advancedTo: acceptedPitchMatch && nextTargetIndex > targetIndex ? nextTargetMidi : null,
       };
       setLastScore(enriched);
+      const guidedGoal = GUIDED_MATCH_GOALS[activeStep];
+      const completedGuidedStage = practiceStyle === "guided" && result.matched && guidedGoal
+        && ((dailySession.guidedStageMatches?.[activeStep] ?? 0) + 1 >= guidedGoal);
       setDailySession((session) => ({
         ...session,
         attempts: [...session.attempts.slice(-17), enriched],
         comfortLowMidi: result.matched ? (session.comfortLowMidi === null ? achievedMidi : Math.min(session.comfortLowMidi, achievedMidi)) : session.comfortLowMidi,
         comfortHighMidi: result.matched ? (session.comfortHighMidi === null ? achievedMidi : Math.max(session.comfortHighMidi, achievedMidi)) : session.comfortHighMidi,
+        guidedStageMatches: result.matched && guidedGoal
+          ? { ...(session.guidedStageMatches ?? {}), [activeStep]: (session.guidedStageMatches?.[activeStep] ?? 0) + 1 }
+          : session.guidedStageMatches ?? {},
       }));
-      if (result.matched && activeStep === "pitch") {
+      if (acceptedPitchMatch) {
         setTargetMisses(0);
-        setTargetIndex((index) => Math.min(EXERCISE_STEPS.length - 1, index + 1));
+        setTargetIndex(nextTargetIndex);
       } else if (activeStep === "pitch") {
         if (result.stableAboveTarget) {
           setTargetMisses(0);
@@ -877,11 +895,16 @@ export default function App() {
           setTargetMisses((misses) => misses + 1);
         }
       }
+      if (completedGuidedStage) {
+        const currentIndex = PRACTICE_FLOW.findIndex((step) => step.id === activeStep);
+        const nextStep = PRACTICE_FLOW[currentIndex + 1];
+        if (nextStep) window.setTimeout(() => selectPracticeStep(nextStep.id), 650);
+      }
     }, 3000);
   }
 
   function resetDay() {
-    const reset = { date: dayKey(), lowMidi: null, highMidi: null, comfortLowMidi: null, comfortHighMidi: null, attempts: [], minutes: 0, seconds: 0, breakAcknowledged: [], voiceCheck: "unset", guidedStep: "warmup", guidedCompleted: false, reflections: [] };
+    const reset = { date: dayKey(), lowMidi: null, highMidi: null, comfortLowMidi: null, comfortHighMidi: null, attempts: [], minutes: 0, seconds: 0, breakAcknowledged: [], voiceCheck: "unset", guidedStep: "warmup", guidedCompleted: false, guidedStageMatches: {}, reflections: [] };
     setDailySession(reset);
     saveTodaySession(reset);
     setHistory([]);
@@ -910,6 +933,11 @@ export default function App() {
   }
 
   function nextHumDrill() {
+    if (practiceStyle === "guided" && humDrillIndex === HUM_DRILLS.length - 1) {
+      setHumDrillIndex(0);
+      window.setTimeout(() => selectPracticeStep("pitch"), 350);
+      return;
+    }
     setHumDrillIndex((index) => (index + 1) % HUM_DRILLS.length);
   }
 
@@ -1462,7 +1490,7 @@ export default function App() {
                   <p className="eyebrow">{activeStageExercise.eyebrow}</p>
                   <h3>{activePractice.title}</h3>
                 </div>
-                <span>{activeStageExercise.duration}</span>
+                <span>{practiceStyle === "guided" && GUIDED_MATCH_GOALS[activeStep] ? `Round ${Math.min((dailySession.guidedStageMatches?.[activeStep] ?? 0) + 1, GUIDED_MATCH_GOALS[activeStep])} of ${GUIDED_MATCH_GOALS[activeStep]}` : activeStageExercise.duration}</span>
               </div>
               <p>{activePractice.prompt}</p>
               <button className="next-stage" onClick={advancePracticeStep}>
@@ -1474,7 +1502,7 @@ export default function App() {
           {practiceStyle === "guided" && dailySession.guidedCompleted && <section className="guided-complete" aria-label="Guided practice complete">
             <CheckCircle2 />
             <div><strong>That is enough for today.</strong><span>Your voice has had a complete gentle round. Keep the easy feeling, drink some water, and come back another day.</span></div>
-            <button onClick={() => { setDailySession((session) => ({ ...session, guidedCompleted: false, guidedStep: "warmup" })); setActiveStep("warmup"); setExerciseMode("comfort-ladder"); }}>Start another round</button>
+            <button onClick={() => { setDailySession((session) => ({ ...session, guidedCompleted: false, guidedStep: "warmup", guidedStageMatches: {} })); setActiveStep("warmup"); setExerciseMode("comfort-ladder"); }}>Start another round</button>
           </section>}
 
           <div className="practice-principles" aria-label="Training principles">
