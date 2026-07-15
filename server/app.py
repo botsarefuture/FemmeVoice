@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from flask import Flask, jsonify, make_response, redirect, request, send_from_directory
+from flask import Flask, jsonify, make_response, redirect, request, send_from_directory, url_for
 from pymongo import ASCENDING, MongoClient
 from pymongo.errors import PyMongoError
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -116,7 +116,10 @@ def health():
 @app.get("/auth/login")
 def auth_login():
     if AuthPackage and LUOVA_AUTH_APP_ID:
-        return redirect("/login")
+        # flask_lac stores this value in the session and redirects to it after
+        # the external login callback. Without it, Flask serializes None and
+        # the user lands on /None.
+        return redirect(url_for("login", next=url_for("index")))
     if not LUOVA_AUTH_APP_ID:
         return jsonify({"error": "LuovaAuth app is not configured"}), 503
     callback = f"{PUBLIC_BASE_URL}/auth/callback"
