@@ -12,6 +12,8 @@ import {
   Gauge,
   Github,
   HeartPulse,
+  Inbox,
+  KeyRound,
   Mic,
   MessageCircle,
   Music2,
@@ -40,7 +42,7 @@ import {
   midiToNoteName,
   semitoneSpan,
 } from "./audio";
-import { deleteAccount, downloadPrivateRecording, exportAccountData, listPrivateRecordings, loadCloudProgress, loadMe, loadReminderSettings, loginAccount, logoutAccount, registerAccount, removePrivateRecording as deletePrivateRecording, requestEmailVerification, saveCloudProgress, saveReminderSettings, submitFeedback, uploadPrivateRecording } from "./api";
+import { deleteAccount, downloadPrivateRecording, exportAccountData, listPrivateRecordings, loadAdminFeedback, loadCloudProgress, loadMe, loadReminderSettings, loginAccount, logoutAccount, registerAccount, removePrivateRecording as deletePrivateRecording, requestEmailVerification, saveCloudProgress, saveReminderSettings, submitFeedback, uploadPrivateRecording } from "./api";
 import { buildCoachTips, scoreAttempt, TARGET_MATCH_TOLERANCE_CENTS } from "./coach";
 import {
   dayKey,
@@ -73,6 +75,7 @@ const APP_VIEWS = [
   { id: "account", label: "Settings", icon: UserRound },
   { id: "privacy", label: "Privacy", icon: ShieldCheck },
   { id: "feedback", label: "Feedback", icon: MessageCircle },
+  { id: "admin-feedback", label: "Feedback inbox", icon: Inbox },
 ];
 const MAIN_VIEW_IDS = new Set(["today", "practice", "progress", "learn", "guide"]);
 
@@ -386,6 +389,9 @@ export default function App() {
   const [feedbackForm, setFeedbackForm] = useState({ category: "idea", message: "" });
   const [feedbackStatus, setFeedbackStatus] = useState("");
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [adminFeedback, setAdminFeedback] = useState([]);
+  const [adminFeedbackStatus, setAdminFeedbackStatus] = useState("");
+  const [adminFeedbackLoading, setAdminFeedbackLoading] = useState(false);
   const [resourceFilter, setResourceFilter] = useState("start");
   const [showExtendedRange, setShowExtendedRange] = useState(() => loadProgress().showExtendedRange ?? false);
   const [gentleDisplay, setGentleDisplay] = useState(() => loadProgress().gentleDisplay ?? false);
@@ -610,6 +616,24 @@ export default function App() {
       });
     return () => { cancelled = true; };
   }, [authInfo.authenticated]);
+
+  useEffect(() => {
+    if (activeView !== "admin-feedback" || !authInfo.user?.is_admin) return;
+    let cancelled = false;
+    setAdminFeedbackLoading(true);
+    setAdminFeedbackStatus("");
+    loadAdminFeedback()
+      .then((payload) => {
+        if (!cancelled) setAdminFeedback(payload.feedback ?? []);
+      })
+      .catch((error) => {
+        if (!cancelled) setAdminFeedbackStatus(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setAdminFeedbackLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [activeView, authInfo.user?.is_admin]);
 
   useEffect(() => {
     const transfer = new URLSearchParams(window.location.search).get("transfer");
@@ -1335,7 +1359,7 @@ export default function App() {
         <section className="view-intro">
           <p className="eyebrow">FemmeVoice</p>
           <h1>{APP_VIEWS.find((view) => view.id === activeView)?.label}</h1>
-          <p>{activeView === "practice" ? "One calm exercise at a time. Stop any time your voice stops feeling easy." : activeView === "progress" ? "Your practice history, range notes, and gentle next steps." : activeView === "learn" ? "Simple explanations first, then deeper resources whenever you want them." : activeView === "guide" ? "What FemmeVoice is based on, what its measurements mean, and where the evidence has limits." : activeView === "privacy" ? "A plain-language account of what FemmeVoice stores, why, and how you stay in control." : activeView === "feedback" ? "Tell us what feels useful, unclear, missing, or unsafe. Thoughtful feedback shapes FemmeVoice." : "Your private FemmeVoice account, preferences, and safety information."}</p>
+          <p>{activeView === "practice" ? "One calm exercise at a time. Stop any time your voice stops feeling easy." : activeView === "progress" ? "Your practice history, range notes, and gentle next steps." : activeView === "learn" ? "Simple explanations first, then deeper resources whenever you want them." : activeView === "guide" ? "What FemmeVoice is based on, what its measurements mean, and where the evidence has limits." : activeView === "privacy" ? "A plain-language account of what FemmeVoice stores, why, and how you stay in control." : activeView === "feedback" ? "Tell us what feels useful, unclear, missing, or unsafe. Thoughtful feedback shapes FemmeVoice." : activeView === "admin-feedback" ? "Private feedback review for FemmeVoice administrators." : "Your private FemmeVoice account, preferences, and safety information."}</p>
         </section>
       )}
 
@@ -1939,25 +1963,26 @@ export default function App() {
       {activeView === "account" && <>
       <section className="account-page" aria-label="Account settings">
         <div>
-          <p className="eyebrow">Private account</p>
-          <h2>{authInfo.authenticated ? `Signed in as ${authInfo.user?.display_name || authInfo.user?.username}` : "Keep your progress with you."}</h2>
-          <p>{authInfo.authenticated ? "Your practice history syncs privately to this account." : "Create an account to keep your training history across devices. No email address is required; email reminders become available after you add and verify one."}</p>
+          <p className="eyebrow">Account & settings</p>
+          <h2>{authInfo.authenticated ? `Hi, ${authInfo.user?.display_name || authInfo.user?.username}.` : "Keep your practice yours."}</h2>
+          <p>{authInfo.authenticated ? "Your progress is synced privately. Start here whenever you want to change how FemmeVoice works for you." : "Create an account to keep your training history across devices. Email is optional and only needed for recovery or reminders."}</p>
         </div>
         <div className="account-page-actions">
           {authInfo.authenticated ? <button className="auth-action" onClick={signOut}>Sign out</button> : <><button className="primary-action" onClick={() => setAccountMode("register")}>Create account</button><button className="auth-action" onClick={() => setAccountMode("login")}>Sign in</button></>}
           {!authInfo.authenticated && <a className="migration-link" href="/api/auth/migration">Already used LuovaAuth? Transfer that training account before 1 Aug 2026</a>}
         </div>
       </section>
-      <div className="account-shortcuts" aria-label="Account help and privacy">
+      <nav className="account-shortcuts" aria-label="Account links">
         <button onClick={() => navigateTo("feedback")}><MessageCircle /> Share feedback</button>
         <button onClick={() => navigateTo("privacy")}><ShieldCheck /> Privacy policy</button>
-      </div>
+        {authInfo.user?.is_admin && <button onClick={() => navigateTo("admin-feedback")}><Inbox /> Feedback inbox</button>}
+      </nav>
 
-      {authInfo.authenticated && <section className="data-rights" aria-label="Your data controls">
+      {authInfo.authenticated && <section className="settings-band account-security" aria-label="Account and data controls">
         <div>
-          <p className="eyebrow">Your data</p>
-          <h3>Export or erase your account</h3>
-          <p>Download the account and progress we hold for you, or permanently delete your FemmeVoice account and synced progress.</p>
+          <p className="eyebrow">Account safety</p>
+          <h3>Your data is in your hands</h3>
+          <p>Export the account and progress we hold for you, or permanently delete your FemmeVoice account and synced progress.</p>
         </div>
         <div>
           <button className="auth-action" onClick={downloadPersonalData}>Download my data</button>
@@ -1966,7 +1991,7 @@ export default function App() {
         {privacyStatus && <p className="privacy-status">{privacyStatus}</p>}
       </section>}
 
-      {authInfo.authenticated && <section className="data-rights" aria-label="Email settings">
+      {authInfo.authenticated && <section className="settings-band" aria-label="Recovery email settings">
         <div>
           <p className="eyebrow">Recovery email</p>
           <h3>{authInfo.user?.email_verified ? "Verified email address" : "Add a recovery email"}</h3>
@@ -1978,7 +2003,7 @@ export default function App() {
         </form>
       </section>}
 
-      {authInfo.authenticated && <section className="data-rights" aria-label="Practice reminder settings">
+      {authInfo.authenticated && <section className="settings-band" aria-label="Practice reminder settings">
         <div>
           <p className="eyebrow">Practice reminders</p>
           <h3>Make practice easier to remember</h3>
@@ -1995,7 +2020,7 @@ export default function App() {
         {reminderStatus && <p className="privacy-status">{reminderStatus}</p>}
       </section>}
 
-      {authInfo.authenticated && <section className="data-rights private-vault-settings" aria-label="Private recording vault">
+      {authInfo.authenticated && <section className="settings-band private-vault-settings" aria-label="Private recording vault">
         <div>
           <p className="eyebrow">Private recording vault</p>
           <h3>{vaultKeyRef.current ? "Vault unlocked" : "Unlock your recordings"}</h3>
@@ -2008,7 +2033,9 @@ export default function App() {
         {vaultStatus && <p className="privacy-status">{vaultStatus}</p>}
       </section>}
 
-      <section className="account-settings-grid" aria-label="All account settings">
+      <section className="preferences-section" aria-label="Practice preferences">
+        <div className="preferences-heading"><div><p className="eyebrow">Practice preferences</p><h2>Make FemmeVoice fit you.</h2><p>These choices change your own practice experience. They are not measurements of your voice or identity.</p></div><KeyRound /></div>
+      <div className="account-settings-grid">
         <article>
           <p className="eyebrow">Profile</p>
           <h3>FemmeVoice identity</h3>
@@ -2063,6 +2090,7 @@ export default function App() {
           <h3>What FemmeVoice remembers</h3>
           <dl><div><dt>Audio</dt><dd>Manual, or auto-record if enabled</dd></div><div><dt>Range history</dt><dd>{historyRetentionDays === 3650 ? "Up to 10 years" : `${Math.round(historyRetentionDays / 30)} months`}</dd></div><div><dt>Account & recordings</dt><dd>Until you delete them</dd></div></dl>
         </article>
+      </div>
       </section>
 
       <button className="account-link privacy-link" onClick={() => navigateTo("privacy")}>Read the full privacy policy</button>
@@ -2076,7 +2104,7 @@ export default function App() {
         <div className="privacy-policy-heading"><ShieldCheck /><div><p className="eyebrow">Privacy policy</p><h2>Your voice stays yours.</h2><p>Effective 15 July 2026. FemmeVoice is a practice companion, not a diagnostic or therapy service.</p></div></div>
         <div className="privacy-policy-text">
           <section><h3>Who is responsible</h3><p>Emilia Vuorenmaa is the controller for FemmeVoice. Contact: <a href="mailto:emilia@luova.club">emilia@luova.club</a>.</p></section>
-          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to. We send practice reminder email only when you have explicitly enabled it in Settings, and use the saved practice date only to avoid sending a redundant reminder after you have already practised that day.</p></section>
+          <section><h3>What we collect and why</h3><p>We collect the username you choose, a salted passphrase hash, optional verified recovery email, device identifier, practice progress, settings, and limited session and security data. We use this to provide your account, sync progress, keep the service secure, and send verification email only when you ask us to. We send practice reminder email only when you have explicitly enabled it in Settings, and use the saved practice date only to avoid sending a redundant reminder after you have already practised that day. Feedback is optional; we store its category, message, and submission time for up to one year so authorised FemmeVoice administrators can improve the product. The feedback inbox does not display the submitting account.</p></section>
           <section><h3>Microphone and recordings</h3><p>Pitch analysis happens in your browser. FemmeVoice does not record or upload audio unless you explicitly turn on automatic recording or start a recording yourself. When the private vault is unlocked and automatic recording is enabled, FemmeVoice records voiced parts of practice and skips quiet gaps. Before an audio note is uploaded, it is encrypted in your browser. We store the encrypted audio plus the label, date, duration, file type, size, and technical encryption information needed to retrieve it. We cannot play the audio.</p></section>
           <section><h3>Your control</h3><p>You can turn automatic recording off in Settings, discard a take, delete individual recordings, export account and progress data, or permanently delete your account. Account data stays until deletion; security records are kept only as long as needed for security and operations.</p></section>
           <section><h3>Sharing and security</h3><p>Only infrastructure providers needed to host FemmeVoice and its database process data for us. We do not sell data, use advertising, or profile people for marketing. We use HTTPS, secure session cookies, CSRF protection, password hashing, access controls, and data minimisation. No security measure is absolute.</p></section>
@@ -2092,6 +2120,13 @@ export default function App() {
           <div className="feedback-actions"><button className="primary-action" disabled={feedbackSubmitting}>{feedbackSubmitting ? "Sending feedback..." : "Send feedback"}</button>{feedbackStatus && <p>{feedbackStatus}</p>}</div>
         </form>
       </section>}
+
+      {activeView === "admin-feedback" && (authInfo.user?.is_admin ? <section className="admin-feedback-page" aria-label="Administrator feedback inbox">
+        <div className="admin-feedback-heading"><Inbox /><div><p className="eyebrow">Administrator only</p><h2>Feedback inbox</h2><p>Feedback is shown without account identifiers. Treat messages as private, avoid copying them elsewhere, and use the safety category for urgent product concerns.</p></div></div>
+        <div className="admin-feedback-summary"><strong>{adminFeedbackLoading ? "Loading feedback..." : `${adminFeedback.length} recent messages`}</strong><span>Newest first. FemmeVoice keeps feedback for up to one year.</span></div>
+        {adminFeedbackStatus && <p className="alert">{adminFeedbackStatus}</p>}
+        {!adminFeedbackLoading && !adminFeedbackStatus && <div className="admin-feedback-list">{adminFeedback.length > 0 ? adminFeedback.map((item) => <article key={item.id} className={`feedback-item feedback-${item.category}`}><div><span>{formatFeedbackCategory(item.category)}</span><time dateTime={item.created_at}>{formatFeedbackDate(item.created_at)}</time></div><p>{item.message}</p></article>) : <p className="admin-feedback-empty">No feedback has been received yet.</p>}</div>}
+      </section> : <section className="admin-feedback-page"><h2>Administrator access required</h2><p>This area is not available for this account.</p></section>)}
 
       {accountMode && (
         <div className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title">
@@ -2274,6 +2309,15 @@ function formatReminderDays(days) {
   if (selected.length === REMINDER_DAYS.length) return "every day";
   if (selected.length === 5 && selected.every((day) => day.value < 5)) return "weekdays";
   return selected.map((day) => day.label).join(", ");
+}
+
+function formatFeedbackCategory(category) {
+  return ({ idea: "Feature idea", bug: "Bug", resource: "Resource", safety: "Safety", other: "Other" })[category] ?? "Feedback";
+}
+
+function formatFeedbackDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Unknown date" : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 function recordingAad(username, recordingId, mimeType) {

@@ -17,6 +17,7 @@ Transfemme voice-training web app.
 - Auth: first-party FemmeVoice username and passphrase accounts with server-side sessions
 - Database: MongoDB progress storage
 - Service: Gunicorn/Flask backend
+- Admin feedback inbox: server-side administrator allowlist via `FEMMEVOICE_ADMIN_USERNAMES` (comma-separated lowercase usernames); never grant admin access from the browser
 
 Progress sync stores only app progress data. Audio analysis runs in the browser. Recordings are never uploaded by default; people can explicitly save a recording to their private vault, where it is encrypted in the browser before upload.
 
@@ -25,6 +26,8 @@ Training includes selectable Starter, Steady, and Deep session tiers, guided hum
 The product intentionally does not claim to detect resonance, vocal weight, or vocal health from microphone data. It measures pitch, pitch stability, and level locally in the browser, then presents listening prompts and safe-practice guidance for the rest.
 
 The app stores only the selected username, a salted slow passphrase hash, and the practice progress/settings required for sync. The optional private vault includes 100 MB of encrypted recording storage; the server stores ciphertext, not playable audio. A short-term account-transfer path is available through 1 August 2026 for existing saved progress.
+
+Feedback is optional and rate-limited. It is retained for up to one year. The admin feedback inbox exposes category, time, and message only; it does not show the submitting account identifier.
 
 ## Local
 

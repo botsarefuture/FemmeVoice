@@ -44,8 +44,16 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 MAIL_FROM = os.environ.get("MAIL_FROM", SMTP_USERNAME)
 LOGIN_WINDOW_SECONDS = 15 * 60
 LOGIN_MAX_ATTEMPTS = 8
+FEEDBACK_WINDOW_SECONDS = 60 * 60
+FEEDBACK_MAX_SUBMISSIONS = 12
 FREE_RECORDING_LIMIT_BYTES = 100 * 1024 * 1024
+ADMIN_USERNAMES = frozenset(
+    username.strip().lower()
+    for username in os.environ.get("FEMMEVOICE_ADMIN_USERNAMES", "").split(",")
+    if username.strip()
+)
 login_attempts = {}
+feedback_attempts = {}
 
 app = Flask(__name__, static_folder=str(DIST), static_url_path="")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
@@ -87,7 +95,7 @@ def apply_security_headers(response):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    if request.path.startswith("/api/auth/") or request.path.startswith("/api/privacy/") or request.path.startswith("/api/recordings"):
+    if request.path.startswith("/api/auth/") or request.path.startswith("/api/privacy/") or request.path.startswith("/api/recordings") or request.path.startswith("/api/admin/"):
         response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -166,6 +174,19 @@ def record_failed_login():
     login_attempts.setdefault(ip, []).append(datetime.now(timezone.utc).timestamp())
 
 
+def feedback_limited():
+    ip = request.remote_addr or "unknown"
+    now = datetime.now(timezone.utc).timestamp()
+    attempts = [timestamp for timestamp in feedback_attempts.get(ip, []) if now - timestamp < FEEDBACK_WINDOW_SECONDS]
+    feedback_attempts[ip] = attempts
+    return len(attempts) >= FEEDBACK_MAX_SUBMISSIONS
+
+
+def record_feedback_submission():
+    ip = request.remote_addr or "unknown"
+    feedback_attempts.setdefault(ip, []).append(datetime.now(timezone.utc).timestamp())
+
+
 def user_from_request():
     user_id = session.get("user_id")
     if not user_id:
@@ -185,7 +206,15 @@ def user_from_request():
         "display_name": user.get("display_name") or user["username"],
         "email": user.get("email"),
         "email_verified": bool(user.get("email_verified_at")),
+        "is_admin": user.get("username_normalized") in ADMIN_USERNAMES,
     }
+
+
+def admin_from_request():
+    user = user_from_request()
+    if not user or not user["is_admin"]:
+        return None
+    return user
 
 
 def storage_key(device_id):
@@ -298,7 +327,7 @@ def register():
     except DuplicateKeyError:
         return auth_error("That username is unavailable.", 409)
     legacy_username = session.get("migration_username")
-    account_user = {"id": str(result.inserted_id), "username": username, "display_name": username}
+    account_user = {"id": str(result.inserted_id), "username": username, "display_name": username, "is_admin": normalized in ADMIN_USERNAMES}
     session.clear()
     session["user_id"] = str(result.inserted_id)
     session.permanent = True
@@ -325,7 +354,7 @@ def login():
     session.permanent = True
     csrf_token()
     users_collection.update_one({"_id": user["_id"]}, {"$set": {"last_login_at": now_iso()}})
-    return jsonify({"authenticated": True, "user": {"id": str(user["_id"]), "username": user["username"], "display_name": user.get("display_name") or user["username"]}})
+    return jsonify({"authenticated": True, "user": {"id": str(user["_id"]), "username": user["username"], "display_name": user.get("display_name") or user["username"], "is_admin": user["username_normalized"] in ADMIN_USERNAMES}})
 
 
 @app.post("/api/auth/logout")
@@ -488,6 +517,8 @@ def submit_feedback():
         return auth_error("Choose a feedback category.")
     if not 10 <= len(message) <= 4000:
         return auth_error("Feedback must be between 10 and 4,000 characters.")
+    if feedback_limited():
+        return auth_error("Too many feedback messages from this connection. Please wait an hour and try again.", 429)
     user = user_from_request()
     feedback_collection.insert_one({
         "category": category,
@@ -495,7 +526,26 @@ def submit_feedback():
         "user_id": user["id"] if user else None,
         "created_at": datetime.now(timezone.utc),
     })
+    record_feedback_submission()
     return jsonify({"ok": True})
+
+
+@app.get("/api/admin/feedback")
+def list_feedback_for_admin():
+    if not admin_from_request():
+        return auth_error("Administrator access is required.", 403)
+    records = list(feedback_collection.find(
+        {}, {"_id": 1, "category": 1, "message": 1, "created_at": 1}
+    ).sort("created_at", -1).limit(100))
+    return jsonify({"feedback": [
+        {
+            "id": str(record["_id"]),
+            "category": record["category"],
+            "message": record["message"],
+            "created_at": record["created_at"].isoformat(),
+        }
+        for record in records
+    ]})
 
 
 @app.get("/api/recordings")

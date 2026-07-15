@@ -107,6 +107,15 @@ export async function submitFeedback(payload) {
   return secureRequest("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 }
 
+export async function loadAdminFeedback() {
+  const response = await fetch("/api/admin/feedback", { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || "Could not load feedback.");
+  }
+  return response.json();
+}
+
 export async function listPrivateRecordings() {
   const response = await fetch("/api/recordings", { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error("Could not load private recordings.");
