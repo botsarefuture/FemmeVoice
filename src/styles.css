@@ -176,6 +176,63 @@ svg {
   background: rgba(33, 142, 126, 0.08);
 }
 
+.daily-insight {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 14px;
+  border: 1px solid rgba(35, 38, 34, 0.13);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 252, 246, 0.88);
+}
+
+.daily-insight h2,
+.daily-insight p {
+  margin: 0;
+}
+
+.daily-insight h2 {
+  font-size: clamp(1.2rem, 2.5vw, 1.65rem);
+  line-height: 1.12;
+}
+
+.daily-insight p {
+  margin-top: 8px;
+  color: #525a54;
+  line-height: 1.4;
+}
+
+.daily-insight.up { border-left: 4px solid #218e7e; }
+.daily-insight.gentle { border-left: 4px solid #c65278; }
+.daily-insight.steady { border-left: 4px solid #6d7480; }
+.daily-insight.neutral { border-left: 4px solid #d49a27; }
+
+.daily-insight-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.daily-insight-stats div {
+  display: grid;
+  gap: 3px;
+  min-height: 98px;
+  align-content: center;
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(35, 38, 34, 0.055);
+}
+
+.daily-insight-stats span,
+.daily-insight-stats small {
+  color: #68736d;
+  font-size: 0.78rem;
+}
+
+.daily-insight-stats strong { font-size: 1.5rem; }
+
 .today-continue h2,
 .today-continue p,
 .account-page h2,
@@ -1700,7 +1757,8 @@ canvas {
   }
 
   .today-continue,
-  .account-page {
+  .account-page,
+  .daily-insight {
     display: grid;
     align-items: start;
   }

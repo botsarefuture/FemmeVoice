@@ -313,6 +313,10 @@ export default function App() {
   const currentCents = current.frequency ? centsOff(current.frequency, targetFrequency) : null;
   const sessionStats = useMemo(() => summarizeSession(history, current, dailySession), [history, current, dailySession]);
   const progressStats = useMemo(() => summarizeProgress(progress), [progress]);
+  const dailyComparison = useMemo(
+    () => buildDailyComparison(progress.days, dailySession),
+    [progress.days, dailySession],
+  );
   const tips = buildCoachTips({ history, targetFrequency, currentFrequency: current.frequency, dailySession });
   const activePractice = PRACTICE_FLOW.find((step) => step.id === activeStep) ?? PRACTICE_FLOW[0];
   const activeHumDrill = HUM_DRILLS[humDrillIndex] ?? HUM_DRILLS[0];
@@ -1160,7 +1164,19 @@ export default function App() {
       </section>
       </>}
 
-      {activeView === "progress" && <section className="progress-dashboard" aria-label="Progress over time">
+      {activeView === "progress" && <>
+      <section className={`daily-insight ${dailyComparison.tone}`} aria-label="Today compared with yesterday">
+        <div>
+          <p className="eyebrow">Today, kindly</p>
+          <h2>{dailyComparison.title}</h2>
+          <p>{dailyComparison.message}</p>
+        </div>
+        <div className="daily-insight-stats">
+          <div><span>Highest easy note</span><strong>{dailyComparison.highNote}</strong><small>{dailyComparison.highDetail}</small></div>
+          <div><span>Comfort range</span><strong>{dailyComparison.range}</strong><small>{dailyComparison.rangeDetail}</small></div>
+        </div>
+      </section>
+      <section className="progress-dashboard" aria-label="Progress over time">
         <div className="progress-summary">
           <p className="eyebrow">Progress memory</p>
           <h2>Last time you reached {midiToNoteName(rememberedTargetMidi)} in {MODE_LABELS[progress.lastMode]}.</h2>
@@ -1180,7 +1196,8 @@ export default function App() {
         <div className="history-bars" aria-label="Recent practice history">
           {progressStats.daysForChart.map((day) => <div className="history-day" key={day.date}><span style={{ height: `${day.height}%` }} /><small>{day.label}</small></div>)}
         </div>
-      </section>}
+      </section>
+      </>}
 
       {activeView === "learn" && <section className="learning-library" aria-label="Voice-training learning library">
         <div className="library-heading">
@@ -1317,6 +1334,64 @@ function summarizeProgress(progress) {
     streak: calculateStreak(progress.days),
     averageScore,
     daysForChart,
+  };
+}
+
+function buildDailyComparison(days, todaySession) {
+  const today = {
+    date: dayKey(),
+    lowMidi: todaySession.lowMidi,
+    highMidi: todaySession.highMidi,
+  };
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayKey = [
+    yesterdayDate.getFullYear(),
+    String(yesterdayDate.getMonth() + 1).padStart(2, "0"),
+    String(yesterdayDate.getDate()).padStart(2, "0"),
+  ].join("-");
+  const yesterday = days.find((day) => day.date === yesterdayKey);
+  const range = semitoneSpan(today.lowMidi, today.highMidi);
+  const base = {
+    highNote: today.highMidi === null ? "--" : midiToNoteName(today.highMidi),
+    highDetail: today.highMidi === null ? "Warm up to map it" : "Highest easy note today",
+    range: range ? `${range} st` : "--",
+    rangeDetail: range ? "Comfort range mapped" : "Keep it gentle",
+  };
+
+  if (today.highMidi === null) {
+    return { ...base, tone: "neutral", title: "There is no number to chase today.", message: "Make one easy hum when you are ready. The comparison begins only after your voice has had a chance to warm up." };
+  }
+  if (!yesterday?.highMidi) {
+    return { ...base, tone: "neutral", title: "Today is your starting point.", message: "This is a note from one practice day, not a limit or a verdict. Let the next session meet you where you are." };
+  }
+
+  const difference = today.highMidi - yesterday.highMidi;
+  const percent = Math.round((midiToFrequency(today.highMidi) / midiToFrequency(yesterday.highMidi) - 1) * 100);
+  if (difference >= 0.5) {
+    return {
+      ...base,
+      tone: "up",
+      title: `Your highest easy note is ${percent}% higher than yesterday’s.`,
+      message: `That is about ${difference.toFixed(1)} semitone${difference >= 1.5 ? "s" : ""} higher. Keep the easy feeling; a higher note only matters when it is repeatable.`,
+      highDetail: `${midiToNoteName(yesterday.highMidi)} yesterday`,
+    };
+  }
+  if (difference <= -0.5) {
+    return {
+      ...base,
+      tone: "gentle",
+      title: "A quieter range day is still real practice.",
+      message: `Today’s highest easy note is below yesterday’s, and that is normal. Sleep, hydration, stress, and warmup all change the voice. Stay with what feels clear, then rest.`,
+      highDetail: `${midiToNoteName(yesterday.highMidi)} yesterday`,
+    };
+  }
+  return {
+    ...base,
+    tone: "steady",
+    title: "Your highest easy note is steady from yesterday.",
+    message: "Consistency is useful information. Keep working with this comfortable area instead of pushing just to make the chart move.",
+    highDetail: `${midiToNoteName(yesterday.highMidi)} yesterday`,
   };
 }
 
