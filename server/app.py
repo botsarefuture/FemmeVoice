@@ -76,7 +76,7 @@ recordings_collection.create_index([("user_id", ASCENDING), ("recording_id", ASC
 @app.after_request
 def apply_security_headers(response):
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self'; "
+        "default-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' blob:; "
         "style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; "
         "frame-ancestors 'none'; form-action 'self'"
     )
