@@ -2568,6 +2568,20 @@ canvas {
 .admin-advanced-json { display: grid; gap: 10px; border-top: 1px solid rgba(35,38,34,.14); padding-top: 14px; }
 .admin-advanced-json p { margin: 0; color: #59645e; line-height: 1.4; }
 .admin-advanced-json textarea { font: .82rem/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.admin-publishing-workflow > div:first-child { display: grid; gap: 5px; }
+.admin-publishing-workflow > div:first-child p { color: #59645e; }
+.academy-content-status { display: inline-block; margin-left: 7px; border-radius: 999px; padding: 3px 8px; background: #edf3ef; color: #245d4d; font-size: .78rem; font-weight: 760; }
+.status-review_requested { background: #fff1cf; color: #7a5711; }
+.status-in_review { background: #e0f2ec; color: #17665b; }
+.status-published { background: #e7f0fc; color: #245e94; }
+.admin-workflow-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-published-notice { border-left: 3px solid #245e94; padding-left: 10px; color: #315e86; line-height: 1.45; }
+.admin-review-form { display: grid; gap: 11px; border: 1px solid rgba(35,38,34,.16); border-radius: 6px; padding: 14px; }
+.admin-review-form legend { padding: 0 5px; color: #59645e; font-size: .83rem; font-weight: 760; }
+.admin-review-form p { margin: 0; color: #59645e; line-height: 1.4; }
+.admin-review-form > label:not(.admin-field) { display: flex; align-items: start; gap: 8px; font-weight: 620; }
+.admin-review-form input[type="checkbox"] { width: 18px; height: 18px; margin: 1px 0 0; }
+.admin-review-form:disabled { opacity: .62; }
 .admin-validation { display: flex; gap: 8px; margin: 0; color: #9d314f; line-height: 1.4; }
 .admin-validation.valid { color: #17665b; }
 .admin-blocks { border-top: 1px solid rgba(35,38,34,.14); padding-top: 14px; }

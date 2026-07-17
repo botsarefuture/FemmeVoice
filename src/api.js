@@ -169,6 +169,18 @@ export async function saveAcademyAdminLesson(id, version, lesson, changeNote) {
   return secureRequest(`/api/admin/academy/lessons/${encodeURIComponent(id)}/${version}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson, change_note: changeNote }) });
 }
 
+export async function submitAcademyAdminLessonForReview(id, version) {
+  return secureRequest(`/api/admin/academy/lessons/${encodeURIComponent(id)}/${version}/submit-review`, { method: "PUT" });
+}
+
+export async function reviewAcademyAdminLesson(id, version, review) {
+  return secureRequest(`/api/admin/academy/lessons/${encodeURIComponent(id)}/${version}/review`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ review }) });
+}
+
+export async function publishAcademyAdminLesson(id, version) {
+  return secureRequest(`/api/admin/academy/lessons/${encodeURIComponent(id)}/${version}/publish`, { method: "PUT" });
+}
+
 export async function listAcademyAdminCourses() {
   const response = await fetch("/api/admin/academy/courses", { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error("Could not load Academy courses.");

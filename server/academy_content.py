@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 LESSON_SCHEMA_VERSION = 1
-CONTENT_STATES = {"draft", "in_review", "published"}
+CONTENT_STATES = {"draft", "review_requested", "in_review", "published"}
 BLOCK_TYPES = {"text", "rich_text", "image", "video", "audio", "reflection", "quiz", "interactive_exercise", "reading", "conversation_prompt", "recording", "resource_download", "checkpoint", "why_this"}
 
 
@@ -43,6 +43,14 @@ def validate_review(review):
     if not isinstance(note, str) or len(note) > 4000:
         raise ValueError("Review note is too long.")
     return {"decision": review["decision"], "content_checked": True, "research_checked": True, "accessibility_checked": True, "note": note.strip()}
+
+
+def can_submit_for_review(status):
+    return status in {"draft", "review_requested"}
+
+
+def review_result_status(decision):
+    return "in_review" if decision == "approved" else "draft"
 
 
 def validate_course_document(course):

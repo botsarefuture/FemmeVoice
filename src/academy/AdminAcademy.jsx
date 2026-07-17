@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, ChevronDown, ChevronUp, Eye, FilePlus2, Save, ShieldCheck, Trash2 } from "lucide-react";
-import { listAcademyAdminCourses, listAcademyAdminLessons, loadAcademyAdminLesson, saveAcademyAdminCourse, saveAcademyAdminLesson } from "../api";
+import { BookOpen, ChevronDown, ChevronUp, Eye, FilePlus2, Save, Send, ShieldCheck, Stamp, Trash2 } from "lucide-react";
+import { listAcademyAdminCourses, listAcademyAdminLessons, loadAcademyAdminLesson, publishAcademyAdminLesson, reviewAcademyAdminLesson, saveAcademyAdminCourse, saveAcademyAdminLesson, submitAcademyAdminLessonForReview } from "../api";
 import { ACADEMY_COURSES } from "./catalog";
 import { FOUNDATIONS_LESSONS } from "./content/foundations";
 import LessonPlayer from "./LessonPlayer";
@@ -14,6 +14,8 @@ export default function AdminAcademy({ roles }) {
   const [courses, setCourses] = useState([]);
   const [lesson, setLesson] = useState(null);
   const [course, setCourse] = useState(null);
+  const [lessonStatus, setLessonStatus] = useState("draft");
+  const [review, setReview] = useState({ decision: "approved", content_checked: false, research_checked: false, accessibility_checked: false, note: "" });
   const [changeNote, setChangeNote] = useState("");
   const [status, setStatus] = useState("Loading Academy revisions...");
   const [preview, setPreview] = useState(false);
@@ -41,6 +43,8 @@ export default function AdminAcademy({ roles }) {
     const reference = structuredClone(FOUNDATIONS_LESSONS[index]);
     setLessonDraft(reference, `${reference.title} loaded as an editable draft. Review its evidence, safety, and accessibility before saving.`);
     setChangeNote("Imported the current Foundations lesson as an editable draft.");
+    setLessonStatus("draft");
+    setReview({ decision: "approved", content_checked: false, research_checked: false, accessibility_checked: false, note: "" });
     setPreview(false);
   }
 
@@ -49,6 +53,8 @@ export default function AdminAcademy({ roles }) {
       const payload = await loadAcademyAdminLesson(record.lesson_id, record.version);
       setLessonDraft(payload.lesson, `Editing ${record.title}, version ${record.version}.`);
       setChangeNote(payload.change_note ?? "");
+      setLessonStatus(payload.status ?? "draft");
+      setReview(payload.review ?? { decision: "approved", content_checked: false, research_checked: false, accessibility_checked: false, note: "" });
       setPreview(false);
     } catch (error) { setStatus(error.message); }
   }
@@ -58,7 +64,42 @@ export default function AdminAcademy({ roles }) {
     try {
       setStatus("Saving draft...");
       await saveAcademyAdminLesson(lesson.id, lesson.version, lesson, changeNote);
+      setLessonStatus("draft");
       setStatus("Draft saved. A reviewer must confirm content, research, and accessibility before it can be published.");
+      refresh();
+    } catch (error) { setStatus(error.message); }
+  }
+
+  async function submitForReview() {
+    if (!lesson || !validation.valid) return;
+    try {
+      setStatus("Requesting review...");
+      const result = await submitAcademyAdminLessonForReview(lesson.id, lesson.version);
+      setLessonStatus(result.status);
+      setStatus("Review requested. The lesson stays private until a reviewer and publisher complete their checks.");
+      refresh();
+    } catch (error) { setStatus(error.message); }
+  }
+
+  async function completeReview() {
+    if (!lesson) return;
+    try {
+      setStatus("Saving review...");
+      const result = await reviewAcademyAdminLesson(lesson.id, lesson.version, review);
+      setLessonStatus(result.status);
+      setReview(result.review);
+      setStatus(result.review.decision === "approved" ? "Review approved. A publisher can now publish this immutable revision." : "Changes requested. The author can revise the draft and request review again.");
+      refresh();
+    } catch (error) { setStatus(error.message); }
+  }
+
+  async function publishRevision() {
+    if (!lesson) return;
+    try {
+      setStatus("Publishing revision...");
+      const result = await publishAcademyAdminLesson(lesson.id, lesson.version);
+      setLessonStatus(result.status);
+      setStatus("Published. This revision is now immutable; create a new version for a material change.");
       refresh();
     } catch (error) { setStatus(error.message); }
   }
@@ -129,6 +170,7 @@ export default function AdminAcademy({ roles }) {
           <LessonDetails lesson={lesson} onChange={updateLesson} />
           <EvidenceEditor lesson={lesson} onChange={updateLesson} />
           <BlockEditor lesson={lesson} onChange={updateLesson} />
+          <PublishingWorkflow lesson={lesson} lessonStatus={lessonStatus} review={review} onReviewChange={setReview} roles={roles} onSubmit={submitForReview} onReview={completeReview} onPublish={publishRevision} />
           <details className="admin-advanced-json"><summary>Advanced structured document</summary><p>Use this only for carefully reviewed schema-level changes. Normal lesson authoring happens in the forms above.</p><textarea aria-label="Advanced lesson document" value={advancedJson} onChange={(event) => setAdvancedJson(event.target.value)} rows="16" spellCheck="false" /><button type="button" className="secondary-action" onClick={applyAdvancedJson}>Apply advanced changes</button></details>
           <label>Change note<textarea value={changeNote} onChange={(event) => setChangeNote(event.target.value)} placeholder="What changed, and why?" rows="3" maxLength="4000" /></label>
           <div className="admin-academy-actions"><button type="button" className="secondary-action" onClick={() => setPreview(true)} disabled={!validation.valid}><Eye /> Preview lesson</button><button type="button" className="primary-action" onClick={saveDraft} disabled={!validation.valid || !roles.includes("author")}><Save /> Save draft</button></div>
@@ -151,6 +193,13 @@ function LessonDetails({ lesson, onChange }) {
   const updateSafety = (field, value) => onChange((next) => { next.safety[field] = value; });
   const updateAccessibility = (field, value) => onChange((next) => { next.accessibility[field] = value; });
   return <section className="admin-form-section" aria-labelledby="lesson-details-title"><div><p className="eyebrow">Lesson details</p><h3 id="lesson-details-title">Give learners a clear, calm starting point.</h3></div><div className="admin-form-grid"><Field label="Lesson title" value={lesson.title} onChange={(value) => update("title", value)} required /><Field label="Slug" value={lesson.slug} onChange={(value) => update("slug", value)} required hint="Stable web identifier, for example: first-listening." /><Field label="Lesson ID" value={lesson.id} onChange={(value) => update("id", value)} required /><Field label="Version" value={lesson.version} type="number" min="1" onChange={(value) => update("version", numberOrZero(value))} required /><Field label="Locale" value={lesson.locale} onChange={(value) => update("locale", value)} required /><Field label="Estimated minutes" value={lesson.metadata.estimatedMinutes ?? ""} type="number" min="0" onChange={(value) => updateMetadata("estimatedMinutes", numberOrZero(value))} /><Field label="Learning objective" value={lesson.objective ?? ""} onChange={(value) => update("objective", value)} multiline /><Field label="Completion message" value={lesson.metadata.completionMessage ?? ""} onChange={(value) => updateMetadata("completionMessage", value)} multiline /><Field label="Tags" value={(lesson.metadata.tags ?? []).join(", ")} onChange={(value) => updateMetadata("tags", commaList(value))} hint="Comma separated. Visible only to authors for now." /><Field label="Translation locales" value={(lesson.translations ?? []).map((translation) => typeof translation === "string" ? translation : translation.locale).join(", ")} onChange={(value) => update("translations", commaList(value).map((locale) => ({ locale })))} hint="Translation-ready locale references; translated content stays in a separate revision." /></div><div className="admin-form-columns"><fieldset><legend>Voice and learner safety</legend><Field label="Safety note" value={lesson.safety.note ?? ""} onChange={(value) => updateSafety("note", value)} multiline /><Field label="Stop signals" value={(lesson.safety.stopSignals ?? []).join(", ")} onChange={(value) => updateSafety("stopSignals", commaList(value))} hint="Comma separated, e.g. pain, persistent hoarseness." /><Field label="Lower-intensity alternative" value={lesson.safety.lowerIntensityAlternative ?? ""} onChange={(value) => updateSafety("lowerIntensityAlternative", value)} multiline /></fieldset><fieldset><legend>Lesson accessibility</legend><Field label="Text alternative or access note" value={lesson.accessibility.alternative ?? ""} onChange={(value) => updateAccessibility("alternative", value)} multiline /><Field label="Reduced-motion alternative" value={lesson.accessibility.reducedMotionAlternative ?? ""} onChange={(value) => updateAccessibility("reducedMotionAlternative", value)} multiline /></fieldset></div></section>;
+}
+
+function PublishingWorkflow({ lesson, lessonStatus, review, onReviewChange, roles, onSubmit, onReview, onPublish }) {
+  const canReview = roles.includes("reviewer") && lessonStatus === "review_requested";
+  const canPublish = roles.includes("publisher") && lessonStatus === "in_review" && review.decision === "approved";
+  const reviewComplete = review.content_checked && review.research_checked && review.accessibility_checked;
+  return <section className="admin-form-section admin-publishing-workflow" aria-labelledby="publishing-title"><div><p className="eyebrow">Review and publishing</p><h3 id="publishing-title">Protect learners with a deliberate release path.</h3><p>Current revision: <strong>v{lesson.version}</strong> <span className={`academy-content-status status-${lessonStatus}`}>{formatContentStatus(lessonStatus)}</span></p></div>{lessonStatus === "published" ? <p className="admin-published-notice">This revision is published and immutable. Duplicate it with a new version before making a material change.</p> : <><div className="admin-workflow-actions">{roles.includes("author") && <button type="button" className="secondary-action" onClick={onSubmit}><Send /> Submit for review</button>}{canPublish && <button type="button" className="primary-action" onClick={onPublish}><Stamp /> Publish revision</button>}</div>{roles.includes("reviewer") && <fieldset className="admin-review-form" disabled={!canReview}><legend>Reviewer checks</legend><p>Review is available after an author submits this revision. Each check is required so evidence, access, and teaching quality are considered together.</p><label><input type="checkbox" checked={review.content_checked} onChange={(event) => onReviewChange({ ...review, content_checked: event.target.checked })} /> Content is clear, accurate, and supportive.</label><label><input type="checkbox" checked={review.research_checked} onChange={(event) => onReviewChange({ ...review, research_checked: event.target.checked })} /> Evidence references and limitations are appropriate.</label><label><input type="checkbox" checked={review.accessibility_checked} onChange={(event) => onReviewChange({ ...review, accessibility_checked: event.target.checked })} /> Accessibility alternatives are complete and usable.</label><label>Decision<select value={review.decision} onChange={(event) => onReviewChange({ ...review, decision: event.target.value })}><option value="approved">Approve for publication</option><option value="changes_requested">Request changes</option></select></label><Field label="Review note" value={review.note ?? ""} onChange={(value) => onReviewChange({ ...review, note: value })} multiline /><button type="button" className="primary-action" onClick={onReview} disabled={!canReview || !reviewComplete}><ShieldCheck /> Save review</button></fieldset>}</>}</section>;
 }
 
 function CourseEditor({ course, records, courses, onStart, onOpen, onChange, onSave, canAuthor }) {
@@ -219,6 +268,7 @@ function Field({ label, value, onChange, multiline = false, hint, required = fal
 
 function commaList(value) { return value.split(",").map((item) => item.trim()).filter(Boolean); }
 function numberOrZero(value) { return value === "" ? 0 : Number(value); }
+function formatContentStatus(status) { return ({ draft: "Draft", review_requested: "Review requested", in_review: "Approved for publication", published: "Published" })[status] ?? status; }
 function uniqueLessons(records) {
   const staticLessons = FOUNDATIONS_LESSONS.map((lesson) => ({ id: lesson.slug, title: lesson.title }));
   const savedLessons = records.map((record) => ({ id: record.lesson_id, title: record.title }));
