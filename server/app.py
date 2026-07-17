@@ -20,7 +20,7 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 from academy_history import normalize_academy_history
-from academy_content import validate_course_document, validate_lesson_document, validate_review
+from academy_content import can_submit_for_review, review_result_status, validate_course_document, validate_lesson_document, validate_review
 from reminder_logic import VALID_REMINDER_TONES, normalize_reminder_days
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -632,14 +632,32 @@ def review_academy_lesson(lesson_id, version):
     record = academy_lessons_collection.find_one({"lesson_id": lesson_id, "version": version})
     if not record:
         return auth_error("Academy lesson revision was not found.", 404)
+    if record.get("status") != "review_requested":
+        return auth_error("An author must submit this draft for review before it can be reviewed.", 409)
     try:
         review = validate_review((request.get_json(silent=True) or {}).get("review"))
     except ValueError as error:
         return auth_error(str(error))
     review.update({"reviewed_by": user["username"], "reviewed_at": now_iso()})
-    status = "in_review" if review["decision"] == "approved" else "draft"
+    status = review_result_status(review["decision"])
     academy_lessons_collection.update_one({"_id": record["_id"]}, {"$set": {"status": status, "review": review, "updated_at": now_iso()}})
     return jsonify({"ok": True, "status": status, "review": review})
+
+
+@app.put("/api/admin/academy/lessons/<lesson_id>/<int:version>/submit-review")
+def submit_academy_lesson_for_review(lesson_id, version):
+    if not csrf_required():
+        return auth_error("Your session expired. Refresh and try again.", 403)
+    user = academy_user_with_role("author")
+    if not user:
+        return auth_error("Academy author access is required.", 403)
+    record = academy_lessons_collection.find_one({"lesson_id": lesson_id, "version": version})
+    if not record:
+        return auth_error("Save the lesson draft before requesting review.", 404)
+    if not can_submit_for_review(record.get("status")):
+        return auth_error("Only a draft revision can be submitted for review. Create a new version for published content.", 409)
+    academy_lessons_collection.update_one({"_id": record["_id"]}, {"$set": {"status": "review_requested", "review_requested_at": now_iso(), "review_requested_by": user["username"], "updated_at": now_iso()}})
+    return jsonify({"ok": True, "status": "review_requested"})
 
 
 @app.put("/api/admin/academy/lessons/<lesson_id>/<int:version>/publish")
