@@ -8,12 +8,12 @@
 
 | Item | Current state |
 | --- | --- |
-| Current milestone | Milestone 5C - Block authoring controls, ready for review |
-| Current version | `v0.3.20` |
-| Current working branch | `feat/academy-course-block-editor` |
-| Active pull request(s) | Block-authoring PR pending. PR #9 is integrated into `main`. |
+| Current milestone | Milestone 5D - Course editor and ordering, ready for review |
+| Current version | `v0.3.21` |
+| Current working branch | `feat/academy-course-management` |
+| Active pull request(s) | Course-management PR pending. PR #10 is integrated into `main`. |
 | Base branch | `main` is canonical. |
-| Next planned milestone | Milestone 5D - Course editor and ordering |
+| Next planned milestone | Interactive-practice architecture research and remaining Admin Academy workflow |
 | Overall completion estimate | About 30% of the long-term Academy vision; the core engine is complete, while history, authoring, media, curriculum, and coaching remain substantial work. |
 
 ## Vision
@@ -44,6 +44,7 @@ The definitive product direction is the [Product Vision](product-vision.md). Voi
 - `v0.3.18` - Academy authoring workspace
 - `v0.3.19` - Academy authoring PR readiness
 - `v0.3.20` - Academy block authoring controls
+- `v0.3.21` - Academy course management
 
 Update this list whenever a versioned change is pushed so milestones, pull requests, and releases remain easy to correlate.
 
@@ -317,10 +318,15 @@ The generic engine is complete and has been validated with real, production-qual
 
 #### Milestone 5D - Course Editor And Ordering
 
-**Status:** ⏳ Planned
+**Status:** 👀 Ready for Review
 **Goal:** Add course metadata and lesson ordering after block controls have been proven against real Foundations content.
 
 **Dependencies:** Milestone 5C
+
+**Delivered**
+- [x] Separate, validated course draft contract with ordered unique lesson references.
+- [x] Course metadata includes summary, locale, estimated minutes, tags, and future-ready prerequisites.
+- [x] Admin workspace can seed and save the real Foundations course and its current lesson order.
 
 ### Milestone 6 - Educational Media Pipeline
 
@@ -419,3 +425,4 @@ The generic engine is complete and has been validated with real, production-qual
 - **2026-07-17:** PRs #6-#8 integrated the Academy review and learner-history stack into `main`. Milestone 5 now branches from the canonical base; 5A begins with a role-scoped content governance API before the admin workspace.
 - **2026-07-17:** Milestone 5B adds a role-gated revision workspace that seeds, validates, saves, and previews the real Foundations welcome lesson. Course and block forms are intentionally a follow-up usability slice, not a rushed drag-and-drop editor.
 - **2026-07-17:** Milestone 5C adds small block controls directly around the real Foundations lesson document. This keeps block ordering accessible and schema-backed, while course editing remains a separate focused PR.
+- **2026-07-17:** Milestone 5D adds a validated course draft contract and seeds the real Foundations path through the Admin Academy. Interactive practice remains research/design work until the authoring workflow is reviewed.

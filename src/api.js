@@ -169,6 +169,16 @@ export async function saveAcademyAdminLesson(id, version, lesson, changeNote) {
   return secureRequest(`/api/admin/academy/lessons/${encodeURIComponent(id)}/${version}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lesson, change_note: changeNote }) });
 }
 
+export async function listAcademyAdminCourses() {
+  const response = await fetch("/api/admin/academy/courses", { headers: { Accept: "application/json" } });
+  if (!response.ok) throw new Error("Could not load Academy courses.");
+  return response.json();
+}
+
+export async function saveAcademyAdminCourse(id, course) {
+  return secureRequest(`/api/admin/academy/courses/${encodeURIComponent(id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ course }) });
+}
+
 export async function listPrivateRecordings() {
   const response = await fetch("/api/recordings", { headers: { Accept: "application/json" } });
   if (!response.ok) throw new Error("Could not load private recordings.");
