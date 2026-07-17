@@ -4,7 +4,7 @@ An open-source, transfemme-focused voice-training practice companion.
 
 Contributions are welcome through issues and pull requests. Read [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) before contributing.
 
-The evidence, safety boundaries, and feature-design principles are public in the [Research and Practice Guide](docs/research-guide.md). It is the source of truth for training-related product changes. The [iOS Readiness Plan](docs/ios-readiness.md) documents the decisions that keep a future native app possible without a rewrite.
+The [Product Vision](docs/product-vision.md) explains the long-term learning experience and non-negotiable product principles. The evidence, safety boundaries, and feature-design principles are public in the [Research and Practice Guide](docs/research-guide.md). It is the source of truth for training-related product changes. The [iOS Readiness Plan](docs/ios-readiness.md) documents the decisions that keep a future native app possible without a rewrite.
 
 FemmeVoice is released under the [MIT License](LICENSE).
 
