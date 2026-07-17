@@ -8,12 +8,12 @@
 
 | Item | Current state |
 | --- | --- |
-| Current milestone | Milestone 4A - Local learner history and reflection (within Milestone 4) |
-| Current version | `v0.3.11` |
-| Current working branch | `feat/academy-learner-history` |
-| Active pull request(s) | None yet for Milestone 4; [PR #5](https://github.com/botsarefuture/FemmeVoice/pull/5) integrated the completed Academy stack into `main`. |
-| Base branch | `main` is canonical. Rebase the active milestone branch onto updated `main` before opening its PR. |
-| Next planned milestone | Milestone 5 - Admin Academy |
+| Current milestone | Post-integration Academy review fixes; Milestone 4A resumes after this focused PR |
+| Current version | `v0.3.13` |
+| Current working branch | `fix/academy-review-feedback` |
+| Active pull request(s) | [PR #6](https://github.com/botsarefuture/FemmeVoice/pull/6) - Academy integration review fixes. [PR #5](https://github.com/botsarefuture/FemmeVoice/pull/5) integrated the completed Academy stack into `main`. |
+| Base branch | `main` is the canonical base. |
+| Next planned milestone | Milestone 4A - Local learner history and reflection |
 | Overall completion estimate | About 30% of the long-term Academy vision; the core engine is complete, while history, authoring, media, curriculum, and coaching remain substantial work. |
 
 ## Vision
@@ -35,6 +35,8 @@ The definitive product direction is the [Product Vision](product-vision.md). Voi
 - `v0.3.9` - Generic Lesson Engine
 - `v0.3.10` - Foundations MVP: first production-quality lessons
 - `v0.3.11` - Academy Polish
+- `v0.3.12` - Academy integration review fixes
+- `v0.3.13` - Academy integration review PR readiness
 
 Update this list whenever a versioned change is pushed so milestones, pull requests, and releases remain easy to correlate.
 
@@ -320,6 +322,16 @@ The generic engine is complete and has been validated with real, production-qual
 - Community, anonymous product analytics, and native-client work remain later concerns. They are not dependencies for a private, useful Academy history experience.
 - Dependencies are intentionally conservative: the remaining Foundations curriculum depends on learner insight plus content operations and a media pipeline, not merely on more application code.
 
+## Post-Integration Review
+
+**Reviewed:** 17 July 2026, PR #5 automated and human review surfaces
+
+- **Accepted:** Lesson resume records must be stored per lesson id and version. A single global entry lost an earlier lesson's safe breakpoint after another lesson opened.
+- **Accepted:** Renderer-specific content needs structural validation, not only required-field presence. Malformed rich text or quiz data must fail the validation boundary rather than reach a renderer.
+- **Accepted:** Incorrect safety-quiz choices must never receive an affirmative phrase. Correct and incorrect answers now have distinct feedback paths.
+- **Human feedback:** None was present on PR #5.
+- **Declined suggestions:** None. The review had three concrete defects, all within the scope of this focused fix.
+
 ## Future Ideas
 
 - Finnish and English localized academy content.
@@ -339,3 +351,4 @@ The generic engine is complete and has been validated with real, production-qual
 - **2026-07-17:** Academy Polish pass completed. It improves focus management, mobile touch targets, reduced-motion behaviour, low-pressure reflection completion, and content accuracy without expanding the lesson engine or learner-data surface.
 - **2026-07-17:** PR #5 integrated the reviewed Academy stack into `main`. Future milestones return to `main` as their canonical base; the active learner-history branch will rebase before its own PR.
 - **2026-07-17:** Roadmap refinement added Active Development, release history, the Git workflow, a media pipeline milestone, and the 4A/4B privacy boundary for learner history.
+- **2026-07-17:** Post-integration review fixes address per-lesson resume persistence, renderer-specific schema validation, and corrective safety-quiz feedback before Milestone 4 resumes.
