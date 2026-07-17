@@ -2,18 +2,18 @@
 
 **Status:** living implementation guide  
 **Last updated:** 17 July 2026  
-**Current development phase:** Milestone 4 - Learner Progress & History, in progress
+**Current development phase:** Milestone 5 - Admin Academy, in progress
 
 ## Active Development
 
 | Item | Current state |
 | --- | --- |
-| Current milestone | Milestone 4B - Opt-in sync and privacy lifecycle, in progress |
+| Current milestone | Milestone 5A - Academy content governance API, in progress |
 | Current version | `v0.3.17` |
-| Current working branch | `feat/academy-history-sync` |
-| Active pull request(s) | [PR #6](https://github.com/botsarefuture/FemmeVoice/pull/6) - Academy integration review fixes; [PR #7](https://github.com/botsarefuture/FemmeVoice/pull/7) - Milestone 4A local learner history; [PR #8](https://github.com/botsarefuture/FemmeVoice/pull/8) - Milestone 4B opt-in sync. [PR #5](https://github.com/botsarefuture/FemmeVoice/pull/5) integrated the completed Academy stack into `main`. |
-| Base branch | Short stack: this branch temporarily targets PR #7 because it depends on the local history contract. Retarget dependent PRs to `main` after the preceding stack merges. |
-| Next planned milestone | Milestone 5 - Admin Academy |
+| Current working branch | `feat/admin-academy` |
+| Active pull request(s) | None yet. PRs #6-#8 are integrated into `main`. |
+| Base branch | `main` is canonical. |
+| Next planned milestone | Milestone 5B - Accessible admin workspace and content preview |
 | Overall completion estimate | About 30% of the long-term Academy vision; the core engine is complete, while history, authoring, media, curriculum, and coaching remain substantial work. |
 
 ## Vision
@@ -266,7 +266,7 @@ The generic engine is complete and has been validated with real, production-qual
 
 ### Milestone 5 - Admin Academy
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 **Goal:** Give authorized contributors a structured, reviewable way to create and publish Academy content.
 **Complexity:** High
 **Dependencies:** Milestones 2-4
@@ -276,6 +276,24 @@ The generic engine is complete and has been validated with real, production-qual
 - [ ] Citation, safety, accessibility, and translation metadata are first-class authoring requirements.
 - [ ] Distinct author, reviewer, publisher, and administrator permissions.
 - [ ] A clean editing workflow before any drag-and-drop builder.
+
+#### Milestone 5A - Content Governance API
+
+**Status:** 🚧 In Progress
+**Goal:** Establish the server-side permission, validation, revision, and publish contract before creating an editor.
+
+**Completed**
+- [x] Separate Academy content collection and immutable published revisions.
+- [x] Environment-configured author, reviewer, publisher, and administrator roles.
+- [x] Draft, review, and publish endpoints with CSRF/auth checks.
+- [x] Content, research, and accessibility checks required before publishing.
+
+#### Milestone 5B - Accessible Admin Workspace
+
+**Status:** ⏳ Planned
+**Goal:** Build a structured authoring and preview interface against the governance API, without a drag-and-drop builder.
+
+**Dependencies:** Milestone 5A
 
 ### Milestone 6 - Educational Media Pipeline
 
@@ -371,3 +389,4 @@ The generic engine is complete and has been validated with real, production-qual
 - **2026-07-17:** Post-integration review fixes address per-lesson resume persistence, renderer-specific schema validation, and corrective safety-quiz feedback before Milestone 4 resumes.
 - **2026-07-17:** Milestone 4A implemented local-only Academy learner history, optional reflections, local-day activity summaries, export, and deletion. It is intentionally stacked on PR #6 until the review fixes merge.
 - **2026-07-17:** Milestone 4B adds opt-in account sync through a separate collection and API. Sync preserves local-first use, merges explicitly bounded learner records, and deletes the account copy when disabled.
+- **2026-07-17:** PRs #6-#8 integrated the Academy review and learner-history stack into `main`. Milestone 5 now branches from the canonical base; 5A begins with a role-scoped content governance API before the admin workspace.
