@@ -1,6 +1,6 @@
 import unittest
 
-from academy_content import validate_lesson_document, validate_review
+from academy_content import validate_course_document, validate_lesson_document, validate_review
 
 
 def lesson():
@@ -19,3 +19,10 @@ class AcademyContentTests(unittest.TestCase):
         self.assertEqual(validate_review({"decision": "approved", "content_checked": True, "research_checked": True, "accessibility_checked": True})["decision"], "approved")
         with self.assertRaises(ValueError):
             validate_review({"decision": "approved", "content_checked": True, "research_checked": False, "accessibility_checked": True})
+
+    def test_course_keeps_an_ordered_unique_lesson_path(self):
+        course = {"id": "foundations", "slug": "foundations", "title": "Foundations", "summary": "A calm start.", "locale": "en", "estimatedMinutes": 60, "lessonIds": ["welcome", "safety"], "tags": ["starter"]}
+        self.assertEqual(validate_course_document(course)["lessonIds"], ["welcome", "safety"])
+        course["lessonIds"].append("welcome")
+        with self.assertRaises(ValueError):
+            validate_course_document(course)

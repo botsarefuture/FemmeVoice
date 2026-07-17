@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, Eye, FilePlus2, Save, ShieldCheck } from "lucide-react";
-import { listAcademyAdminLessons, loadAcademyAdminLesson, saveAcademyAdminLesson } from "../api";
+import { listAcademyAdminCourses, listAcademyAdminLessons, loadAcademyAdminLesson, saveAcademyAdminCourse, saveAcademyAdminLesson } from "../api";
+import { ACADEMY_COURSES } from "./catalog";
 import { FOUNDATIONS_LESSONS } from "./content/foundations";
 import LessonPlayer from "./LessonPlayer";
 import { validateLesson } from "./schema";
@@ -12,6 +13,7 @@ export default function AdminAcademy({ roles }) {
   const [changeNote, setChangeNote] = useState("");
   const [status, setStatus] = useState("Loading Academy revisions…");
   const [preview, setPreview] = useState(false);
+  const [courseDraft, setCourseDraft] = useState("");
   const parsed = useMemo(() => parseDraft(draft), [draft]);
   const validation = useMemo(() => parsed.lesson ? validateLesson(parsed.lesson) : { valid: false, errors: [parsed.error ?? "Choose or create a lesson draft."] }, [parsed]);
 
@@ -30,6 +32,20 @@ export default function AdminAcademy({ roles }) {
     setChangeNote("Imported the current Foundations welcome lesson as an editable draft.");
     setPreview(false);
     setStatus("Foundations reference loaded. Review the evidence, safety, and accessibility fields before saving.");
+  }
+
+  function startFoundationsCourse() {
+    const course = ACADEMY_COURSES.find((item) => item.slug === "foundations");
+    setCourseDraft(JSON.stringify({ id: course.slug, slug: course.slug, title: course.title, summary: course.summary, locale: "en", estimatedMinutes: course.estimatedMinutes, lessonIds: course.lessons.map((lesson) => lesson.slug), tags: ["foundations", "transfeminine"], prerequisiteCourseIds: [] }, null, 2));
+    setStatus("Foundations course loaded with its current lesson order.");
+  }
+
+  async function saveCourse() {
+    try {
+      const course = JSON.parse(courseDraft);
+      await saveAcademyAdminCourse(course.id, course);
+      setStatus("Course draft saved with its lesson order.");
+    } catch (error) { setStatus(error.message || "The course document is not valid JSON yet."); }
   }
 
   async function openRecord(record) {
@@ -78,6 +94,7 @@ export default function AdminAcademy({ roles }) {
         {status && <p className="privacy-status">{status}</p>}
       </div>
     </div>
+    <section className="admin-course-editor" aria-labelledby="admin-course-title"><div><p className="eyebrow">Course structure</p><h3 id="admin-course-title">Keep the learning path legible.</h3><p>Courses use ordered lesson references. Prerequisites stay available for later without forcing them on learners today.</p></div><div><button type="button" className="secondary-action" onClick={startFoundationsCourse}>Load Foundations course</button>{courseDraft && <><textarea aria-label="Course document" value={courseDraft} onChange={(event) => setCourseDraft(event.target.value)} rows="12" spellCheck="false" /><button type="button" className="primary-action" onClick={saveCourse} disabled={!roles.includes("author")}>Save course draft</button></>}</div></section>
   </section>;
 }
 

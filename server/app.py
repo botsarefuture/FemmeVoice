@@ -20,7 +20,7 @@ from pymongo.errors import DuplicateKeyError, PyMongoError
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 from academy_history import normalize_academy_history
-from academy_content import validate_lesson_document, validate_review
+from academy_content import validate_course_document, validate_lesson_document, validate_review
 from reminder_logic import VALID_REMINDER_TONES, normalize_reminder_days
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -82,6 +82,7 @@ feedback_collection = db["feedback"]
 recordings_collection = db["private_recordings"]
 academy_history_collection = db["academy_history"]
 academy_lessons_collection = db["academy_lessons"]
+academy_courses_collection = db["academy_courses"]
 recordings_bucket = GridFSBucket(db, bucket_name="private_recordings")
 progress_collection.create_index([("device_id", ASCENDING)])
 progress_collection.create_index([("storage_key", ASCENDING)], unique=True)
@@ -93,6 +94,7 @@ recordings_collection.create_index([("user_id", ASCENDING), ("recording_id", ASC
 academy_history_collection.create_index([("user_id", ASCENDING)], unique=True)
 academy_lessons_collection.create_index([("lesson_id", ASCENDING), ("version", ASCENDING)], unique=True)
 academy_lessons_collection.create_index([("status", ASCENDING), ("updated_at", ASCENDING)])
+academy_courses_collection.create_index([("course_id", ASCENDING)], unique=True)
 
 
 @app.after_request
@@ -549,6 +551,33 @@ def list_academy_lessons_for_admin():
         "lesson_id": item["lesson_id"], "version": item["version"], "status": item["status"], "title": item.get("title"),
         "slug": item.get("slug"), "locale": item.get("locale"), "updated_at": item.get("updated_at"), "review": item.get("review"),
     } for item in records]})
+
+
+@app.get("/api/admin/academy/courses")
+def list_academy_courses_for_admin():
+    user = user_from_request()
+    if not user or not user["academy_roles"]:
+        return auth_error("Academy authoring access is required.", 403)
+    records = list(academy_courses_collection.find({}, {"_id": 0}).sort("updated_at", -1).limit(100))
+    return jsonify({"courses": records})
+
+
+@app.put("/api/admin/academy/courses/<course_id>")
+def save_academy_course_draft(course_id):
+    if not csrf_required():
+        return auth_error("Your session expired. Refresh and try again.", 403)
+    user = academy_user_with_role("author")
+    if not user:
+        return auth_error("Academy author access is required.", 403)
+    try:
+        course = validate_course_document((request.get_json(silent=True) or {}).get("course"))
+    except ValueError as error:
+        return auth_error(str(error))
+    if course["id"] != course_id:
+        return auth_error("Course path must match the course id.")
+    timestamp = now_iso()
+    academy_courses_collection.update_one({"course_id": course_id}, {"$set": {"course_id": course_id, "course": course, "status": "draft", "updated_at": timestamp, "authored_by": user["username"]}, "$setOnInsert": {"created_at": timestamp}}, upsert=True)
+    return jsonify({"ok": True, "status": "draft", "updated_at": timestamp})
 
 
 @app.get("/api/admin/academy/lessons/<lesson_id>/<int:version>")

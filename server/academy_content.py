@@ -45,6 +45,24 @@ def validate_review(review):
     return {"decision": review["decision"], "content_checked": True, "research_checked": True, "accessibility_checked": True, "note": note.strip()}
 
 
+def validate_course_document(course):
+    if not isinstance(course, dict):
+        raise ValueError("Course must be an object.")
+    required = ("id", "slug", "title", "summary", "locale", "estimatedMinutes", "lessonIds")
+    if any(key not in course for key in required):
+        raise ValueError("Course is missing required fields.")
+    if not all(_text(course[key], 2000 if key == "summary" else 200) for key in ("id", "slug", "title", "summary", "locale")):
+        raise ValueError("Course identity is invalid.")
+    if not isinstance(course["estimatedMinutes"], int) or course["estimatedMinutes"] < 0:
+        raise ValueError("Course duration is invalid.")
+    if not isinstance(course["lessonIds"], list) or len(course["lessonIds"]) > 100 or len(set(course["lessonIds"])) != len(course["lessonIds"]) or not all(_text(item, 120) for item in course["lessonIds"]):
+        raise ValueError("Course lesson ordering is invalid.")
+    clean = deepcopy(course)
+    clean["prerequisiteCourseIds"] = [item for item in course.get("prerequisiteCourseIds", []) if _text(item, 120)] if isinstance(course.get("prerequisiteCourseIds", []), list) else []
+    clean["tags"] = [item for item in course.get("tags", []) if _text(item, 80)] if isinstance(course.get("tags", []), list) else []
+    return clean
+
+
 def _validate_block(block, evidence_ids):
     if not isinstance(block, dict) or not _text(block.get("id"), 120) or block.get("type") not in BLOCK_TYPES:
         raise ValueError("Block id or type is invalid.")
