@@ -2,16 +2,16 @@
 
 **Status:** living implementation guide  
 **Last updated:** 17 July 2026  
-**Current development phase:** Milestone 5 - Admin Academy, completed
+**Current development phase:** Milestone 6 - Educational Media Pipeline, in progress
 
 ## Active Development
 
 | Item | Current state |
 | --- | --- |
-| Current milestone | Milestone 5 - Admin Academy, completed and ready to merge |
-| Current version | `v0.3.28` |
-| Current working branch | `feat/academy-pipeline-e2e` |
-| Active pull request(s) | PR #17 - isolated Academy staging and end-to-end validation |
+| Current milestone | Milestone 6 - Educational Media Pipeline, in progress |
+| Current version | `v0.3.29` |
+| Current working branch | `feat/academy-media-foundation` |
+| Active pull request(s) | Media-contract PR in preparation; PR #17 is integrated into `main`. |
 | Base branch | `main` is canonical. |
 | Next planned milestone | Milestone 6 - Educational Media Pipeline |
 | Overall completion estimate | About 40% of the long-term Academy vision; engine, history, governance, authoring, and delivery are complete, while media, remaining curriculum, and coaching remain substantial work. |
@@ -52,6 +52,7 @@ The definitive product direction is the [Product Vision](product-vision.md). Voi
 - `v0.3.26` - Governed Academy content delivery
 - `v0.3.27` - Local Academy staging workflow
 - `v0.3.28` - Milestone 5 end-to-end governance validation
+- `v0.3.29` - Versioned educational media contract
 
 Update this list whenever a versioned change is pushed so milestones, pull requests, and releases remain easy to correlate.
 
@@ -421,6 +422,10 @@ Milestone 5 ends when a contributor can comfortably maintain the complete Founda
 - [ ] Research, content, and accessibility review are recorded before publication.
 - [ ] Assets have replacement, correction, and localization workflows rather than being embedded as one-off files.
 - [ ] No production teaching media is published without its required accessible alternatives.
+
+**In progress**
+- [x] Versioned media contract covers locale, source, rights, accessibility metadata, and three-part review.
+- [x] Existing Foundations voice-pathway illustration validates as the first real asset fixture.
 
 ### Milestone 7 - Transparent Coach
 
